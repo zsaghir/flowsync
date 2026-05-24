@@ -1,20 +1,21 @@
 "use client";
-import React, { useState } from "react";
-import SettingsContext from "../context/SettingContext";
-// REMOVED: Timer import (You are using TimerWrapper instead)
-import Tasks from "./Components/Tasks";
-import UserProfile from "./Components/user/UserProfile";
-import Setting from "./Components/Setting";
-import UserTasks from "./Components/user/userTasks";
-import { useAuth } from "@/context/AuthContext";
-import TimerWrapper from "./Timer/page";
+import { useState, useEffect } from "react";
+import { SettingsContext } from "./components/Contexts";
+import Tasks from "./components/Tasks";
+import UserProfile from "./components/UserProfile";
+import Setting from "./components/Setting";
+import UserTasks from "./components/UserTasks";
+import { useAuth } from "@/app/components/Contexts";
+import Timer from "./components/Timer";
 
 export default function Page() {
   const [pomodoroTime, setPomodoroTime] = useState(25);
   const [breakTime, setBreakTime] = useState(5);
   const [music, setMusic] = useState("None");
-  // REMOVED: userinfo and setuserinfo (defined but never used)
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   return (
     <SettingsContext.Provider
@@ -36,9 +37,9 @@ export default function Page() {
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] py-10 gap-20 box-timer">
-        <TimerWrapper />
-        {user ? <UserTasks /> : <Tasks />}
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] py-10 gap-10">
+        <Timer />
+        {mounted && !loading ? (user ? <UserTasks /> : <Tasks />) : <Tasks />}
       </div>
     </SettingsContext.Provider>
   );

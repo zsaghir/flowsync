@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useContext, useState } from "react";
-import SettingsContext from "../../context/SettingContext";
+import { SettingsContext } from "./Contexts";
 import { Popup, Button } from "pixel-retroui";
 
 const musicOptions = [
@@ -12,9 +12,13 @@ const musicOptions = [
 ];
 
 const Setting = () => {
+
+
+  //Managing Popup State
   const settingsInfo = useContext(SettingsContext)!;
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
+  //Managing choosing music state before saving
   const [tempPomodoro, setTempPomodoro] = useState(settingsInfo.pomodoroTime);
   const [tempBreak, setTempBreak] = useState(settingsInfo.breakTime);
   const [tempmusic, settempMusic] = useState(
@@ -22,9 +26,11 @@ const Setting = () => {
   );
   const [musicOpen, setMusicOpen] = useState(false);
 
+  //functions for poup
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
 
+  //Once save buton is saved
   const handleSave = () => {
     settingsInfo.setPomodoroTime(tempPomodoro);
     settingsInfo.setBreakTime(tempBreak);
@@ -33,7 +39,7 @@ const Setting = () => {
   };
 
   return (
-    <div className="flex justify-center mt-6">
+    <div className="flex items-center">
       {/* Settings Button */}
       <Button
         bg="#D6DAC8"
@@ -94,11 +100,10 @@ const Setting = () => {
                       settempMusic(option.value);
                       setMusicOpen(false);
                     }}
-                    className={`px-4 py-2 cursor-pointer border-b border-white last:border-none hover:bg-[#D6A99D] hover:text-black text-white ${
-                      tempmusic === option.value
+                    className={`px-4 py-2 cursor-pointer border-b border-white last:border-none hover:bg-[#D6A99D] hover:text-black text-white ${tempmusic === option.value
                         ? "text-[#D6A99D] bg-[#D6A99D]"
                         : ""
-                    }`}
+                      }`}
                   >
                     {option.label}
                   </li>
