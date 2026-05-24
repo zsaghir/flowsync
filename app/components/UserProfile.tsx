@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/app/components/Contexts";
 import { Button, Popup } from "pixel-retroui";
 
 const inputClass =

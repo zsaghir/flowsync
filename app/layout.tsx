@@ -1,8 +1,9 @@
 // app/layout.tsx
 import "./globals.css";
-import "@/lib/pixel-retroui-setup.js";
+import "pixel-retroui/dist/index.css";
+import "pixel-retroui/dist/fonts.css";
 import type { Metadata } from "next";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider } from "@/app/components/Contexts";
 
 export const metadata: Metadata = {
   title: "Pomodoro App",

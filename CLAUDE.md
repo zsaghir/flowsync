@@ -20,7 +20,7 @@ docker-compose up --build   # production (single container)
 ## Auth flow
 1. `POST /api/auth/register` — bcrypt hashes password, writes user to `data/db.json`, returns JWT
 2. `POST /api/auth/login` — bcrypt.compare, returns JWT
-3. Client stores `{ user, token }` in localStorage via `AuthContext`
+3. Client stores `{ user, token }` in localStorage via `Contexts.tsx`
 4. All protected API routes read `Authorization: Bearer <token>` header via `lib/auth.ts → getAuthUserId()`
 
 ## Database (`data/db.json`)
@@ -46,8 +46,10 @@ Single JSON file on disk, read/written synchronously by `lib/db.ts`.
 ## Key files
 ```
 app/
-  page.tsx                        — root layout, SettingsContext provider
-  Components/
+  page.tsx                        — root page, SettingsContext provider
+  components/
+    buttons.tsx                   — PlayButton, PauseButton, Break
+    Contexts.tsx                  — auth + settings contexts
     Timer.tsx                     — owns ALL timer state incl. stopwatch
     Stopwatch.tsx                 — pure display component, no internal state
     Tasks.tsx                     — guest (in-memory) task list
@@ -60,9 +62,6 @@ app/
     tasks/route.ts
     tasks/[id]/route.ts
     timer/route.ts
-context/
-  AuthContext.tsx                 — user + token from localStorage
-  SettingContext.tsx              — pomodoroTime, breakTime, music
 lib/
   db.ts                          — read/write data/db.json
   auth.ts                        — signToken, verifyToken, getAuthUserId

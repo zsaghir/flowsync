@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
-import { getAuthUserId } from "@/lib/auth";
+import { db } from "@/server/db";
+import { getAuthUserId } from "@/server/auth";
 
 export async function GET(req: Request) {
   const userId = getAuthUserId(req);

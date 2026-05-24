@@ -1,13 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useContext } from "react";
-import PlayButton from "./PlayButton";
-import PauseButton from "./PauseButton";
-import Break from "./Break";
+import { Break, PauseButton, PlayButton } from "./buttons";
 import Pomodoro from "./Pomodoro";
 import Stopwatch from "./Stopwatch";
-import SettingsContext from "../../context/SettingContext";
-import { useAuth } from "@/context/AuthContext";
+import { SettingsContext, useAuth } from "./Contexts";
 import { Card, Button } from "pixel-retroui";
 
 type Mode = "pomodoro" | "break" | "stopwatch";
@@ -17,12 +14,12 @@ function Timer() {
   const { user, token } = useAuth();
 
   // ── countdown state ──────────────────────────────────────────────────────
-  const [seconds,  setSeconds]  = useState(25 * 60);
+  const [seconds, setSeconds] = useState(25 * 60);
   const [isPaused, setIsPaused] = useState(true);
-  const [mode,     setMode]     = useState<Mode>("pomodoro");
-  const secondsRef  = useRef(seconds);
+  const [mode, setMode] = useState<Mode>("pomodoro");
+  const secondsRef = useRef(seconds);
   const isPausedRef = useRef(isPaused);
-  const modeRef     = useRef<Mode>(mode);
+  const modeRef = useRef<Mode>(mode);
 
   // ── stopwatch state (lifted here so Timer owns all state) ─────────────────
   const [swElapsed, setSwElapsed] = useState(0);
@@ -32,12 +29,12 @@ function Timer() {
 
   // ── audio ─────────────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement>(null);
-  const bellRef  = useRef<HTMLAudioElement>(null);
+  const bellRef = useRef<HTMLAudioElement>(null);
 
   // ── refs that always hold latest user/token (no stale closures) ───────────
-  const userRef  = useRef(user);
+  const userRef = useRef(user);
   const tokenRef = useRef(token);
-  userRef.current  = user;
+  userRef.current = user;
   tokenRef.current = token;
 
   // ── is any timer actively running right now? ──────────────────────────────
@@ -47,15 +44,15 @@ function Timer() {
   function save() {
     if (!userRef.current || !tokenRef.current) return;
     fetch("/api/timer", {
-      method:  "PUT",
+      method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenRef.current}` },
       body: JSON.stringify({
-        mode:      modeRef.current,
-        seconds:   modeRef.current === "stopwatch" ? swElapsedRef.current : secondsRef.current,
+        mode: modeRef.current,
+        seconds: modeRef.current === "stopwatch" ? swElapsedRef.current : secondsRef.current,
         isRunning: modeRef.current === "stopwatch" ? swRunningRef.current : !isPausedRef.current,
         lastSaved: Date.now(),
       }),
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   // ── load saved timer when user logs in ───────────────────────────────────
@@ -104,7 +101,7 @@ function Timer() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── main interval: countdown + stopwatch ticking ─────────────────────────
@@ -118,7 +115,7 @@ function Timer() {
       setIsPaused(true);
       if (bellRef.current) {
         bellRef.current.currentTime = 0;
-        bellRef.current.play().catch(() => {});
+        bellRef.current.play().catch(() => { });
       }
       setMode(next);
       modeRef.current = next;
@@ -130,7 +127,7 @@ function Timer() {
     // Sync seconds when settings change (only if paused — don't interrupt running timer)
     if (isPausedRef.current) {
       if (modeRef.current === "pomodoro") { secondsRef.current = settingsInfo.pomodoroTime * 60; setSeconds(secondsRef.current); }
-      if (modeRef.current === "break")    { secondsRef.current = settingsInfo.breakTime * 60;    setSeconds(secondsRef.current); }
+      if (modeRef.current === "break") { secondsRef.current = settingsInfo.breakTime * 60; setSeconds(secondsRef.current); }
     }
 
     const interval = setInterval(() => {
@@ -152,7 +149,7 @@ function Timer() {
   // ── periodic save every 30 s while running ───────────────────────────────
   useEffect(() => {
     if (!isRunning) return;
-    const id = setInterval(save, 30_000);
+    const id = setInterval(save, 300_000);
     return () => clearInterval(id);
   }, [isRunning]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -162,24 +159,24 @@ function Timer() {
       audioRef.current.src = settingsInfo.music;
       audioRef.current.loop = true;
       audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch(() => { });
     }
   }
 
   function switchToMode(newMode: Mode, newSeconds?: number) {
     if (isRunning) return; // blocked while any timer is running
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
-    setIsPaused(true);     isPausedRef.current = true;
-    setSwRunning(false);   swRunningRef.current = false;
-    setMode(newMode);      modeRef.current = newMode;
+    setIsPaused(true); isPausedRef.current = true;
+    setSwRunning(false); swRunningRef.current = false;
+    setMode(newMode); modeRef.current = newMode;
     if (newSeconds !== undefined) { setSeconds(newSeconds); secondsRef.current = newSeconds; }
     save();
   }
 
   function handleStartBreak(breakMinutes: number) {
     const secs = breakMinutes * 60;
-    setMode("break");  modeRef.current = "break";
-    setSeconds(secs);  secondsRef.current = secs;
+    setMode("break"); modeRef.current = "break";
+    setSeconds(secs); secondsRef.current = secs;
     setIsPaused(false); isPausedRef.current = false;
     save();
   }
@@ -195,15 +192,15 @@ function Timer() {
     );
   }
 
-  const minutes   = Math.floor(seconds / 60);
-  const remSec    = seconds % 60;
+  const minutes = Math.floor(seconds / 60);
+  const remSec = seconds % 60;
   const formatted = `${String(minutes).padStart(2, "0")}:${String(remSec).padStart(2, "0")}`;
 
   return (
     <Card bg="#9CAFAA" className="px-10 py-8 items-center flex flex-col">
       <div className="flex flex-col items-center justify-center">
         <audio ref={audioRef} preload="none" className="hidden" />
-        <audio ref={bellRef}  src="/mixkit-notification-bell-592.wav" preload="none" className="hidden" />
+        <audio ref={bellRef} src="/mixkit-notification-bell-592.wav" preload="none" className="hidden" />
 
         {/* Mode tabs */}
         <div className="flex space-x-3 mt-2">

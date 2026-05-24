@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import SettingsContext from "../context/SettingContext";
-import Tasks from "./Components/Tasks";
-import UserProfile from "./Components/user/UserProfile";
-import Setting from "./Components/Setting";
-import UserTasks from "./Components/user/userTasks";
-import { useAuth } from "@/context/AuthContext";
-import Timer from "./Components/Timer";
+import { SettingsContext } from "./components/Contexts";
+import Tasks from "./components/Tasks";
+import UserProfile from "./components/UserProfile";
+import Setting from "./components/Setting";
+import UserTasks from "./components/UserTasks";
+import { useAuth } from "@/app/components/Contexts";
+import Timer from "./components/Timer";
 
 export default function Page() {
   const [pomodoroTime, setPomodoroTime] = useState(25);
