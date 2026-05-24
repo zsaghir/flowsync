@@ -7,12 +7,6 @@ import {
   Button,
   Input,
 } from "pixel-retroui";
-import { Box, IconButton } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-
-// REMOVED: import { useAuth } from "@/context/AuthContext";
-// (If you leave the import but don't use the hook, Next.js will error)
 
 const Tasks = () => {
   const [taskInput, setTaskInput] = useState("");
@@ -45,7 +39,7 @@ const Tasks = () => {
   };
 
   return (
-    <Box className="flex flex-col items-center mt-4">
+    <div className="flex flex-col items-center">
       <div className="flex items-center gap-2">
         <Input
           bg="white"
@@ -94,28 +88,25 @@ const Tasks = () => {
                     • {task.title}
                   </span>
                   <div className="flex gap-2">
-                    <IconButton
+                    <button
                       onClick={() => completedTask(task.id)}
-                      size="small"
-                      sx={{ color: "white" }}
+                      className="p-1 hover:scale-110 transition"
                     >
-                      <CheckCircleOutlineIcon
-                        fontSize="small"
-                        sx={{
-                          color: task.completed ? "lightgreen" : "gray",
-                          cursor: "pointer",
-                        }}
-                      />
-                    </IconButton>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke={task.completed ? "lightgreen" : "gray"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                    </button>
 
                     <button
                       onClick={() => deleteTask(task.id)}
                       className="p-1 hover:scale-110 transition"
                     >
-                      <DeleteIcon
-                        fontSize="small"
-                        style={{ color: "#f87171" }}
-                      />
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -124,7 +115,7 @@ const Tasks = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </Box>
+    </div>
   );
 };
 

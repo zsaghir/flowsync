@@ -1,16 +1,53 @@
 "use client";
 
-import { createContext, useContext } from "react";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "@/lib/firebase";
+import { createContext, useContext, useState, useEffect } from "react";
 
-const AuthContext = createContext<any>(null);
+type AuthUser = { id: string; email: string } | null;
+
+type AuthContextType = {
+  user: AuthUser;
+  token: string | null;
+  loading: boolean;
+  setAuth: (user: AuthUser, token: string) => void;
+  clearAuth: () => void;
+};
+
+const AuthContext = createContext<AuthContextType>({
+  user: null, token: null, loading: true,
+  setAuth: () => {}, clearAuth: () => {},
+});
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, loading, error] = useAuthState(auth);
+  const [user, setUser]   = useState<AuthUser>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("auth");
+      if (raw) {
+        const { user, token } = JSON.parse(raw);
+        setUser(user);
+        setToken(token);
+      }
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  const setAuth = (user: AuthUser, token: string) => {
+    setUser(user);
+    setToken(token);
+    localStorage.setItem("auth", JSON.stringify({ user, token }));
+  };
+
+  const clearAuth = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("auth");
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error }}>
+    <AuthContext.Provider value={{ user, token, loading, setAuth, clearAuth }}>
       {children}
     </AuthContext.Provider>
   );

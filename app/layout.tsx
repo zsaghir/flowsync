@@ -15,10 +15,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <AuthProvider>
-          <main className="min-h-screen  text-white font-serif">
+          <main className="min-h-screen text-white font-serif">
             {children}
           </main>
         </AuthProvider>

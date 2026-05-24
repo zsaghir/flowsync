@@ -33,7 +33,7 @@ const Setting = () => {
   };
 
   return (
-    <div className="flex justify-center mt-6">
+    <div className="flex items-center">
       {/* Settings Button */}
       <Button
         bg="#D6DAC8"
