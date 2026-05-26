@@ -16,7 +16,7 @@ function Timer() {
   // ── countdown state ──────────────────────────────────────────────────────
   const [seconds, setSeconds] = useState(25 * 60);
   const [isPaused, setIsPaused] = useState(true);
-  const [mode, setMode] = useState<Mode>("pomodoro");
+  const [mode, setMode] = useState<Mode>("stopwatch");
   const secondsRef = useRef(seconds);
   const isPausedRef = useRef(isPaused);
   const modeRef = useRef<Mode>(mode);
@@ -226,11 +226,13 @@ function Timer() {
             onStart={() => {
               swRunningRef.current = true;
               setSwRunning(true);
+              handleMusicChange();
               save();
             }}
             onStop={() => {
               swRunningRef.current = false;
               setSwRunning(false);
+              if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
               save();
             }}
             onReset={() => {
@@ -238,6 +240,7 @@ function Timer() {
               swElapsedRef.current = 0;
               setSwRunning(false);
               setSwElapsed(0);
+              if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
               save();
             }}
             onStartBreak={handleStartBreak}
