@@ -52,7 +52,7 @@ const Setting = () => {
 
       {/* Settings Popup */}
       <Popup isOpen={isPopupOpen} onClose={closePopup}>
-        <div className="flex flex-col space-y-4 bg-[#758581] p-6 rounded-xl backdrop-blur-md border border-gray-500 w-80">
+        <div className="flex flex-col space-y-4 bg-[#758581] p-4 sm:p-6 rounded-xl backdrop-blur-md border border-gray-500 w-[min(20rem,88vw)]">
           <h2 className="text-lg font-bold text-white">Settings</h2>
 
           <label className="text-sm font-semibold text-white">
@@ -112,7 +112,7 @@ const Setting = () => {
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               bg="#D6A99D"
               textColor="black"

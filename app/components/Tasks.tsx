@@ -51,8 +51,8 @@ const Tasks = () => {
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center w-full px-1">
+      <div className="flex flex-wrap justify-center items-center gap-2 w-full max-w-[min(92vw,520px)]">
         <Input
           bg="white"
           textColor="black"
@@ -60,6 +60,7 @@ const Tasks = () => {
           placeholder="Enter a task..."
           value={taskInput}
           onChange={(e) => setTaskInput(e.target.value)}
+          className="w-full sm:w-auto"
         />
 
         <Button
@@ -81,17 +82,17 @@ const Tasks = () => {
         >
           <DropdownMenuTrigger>Tasks ({taskList.length})</DropdownMenuTrigger>
 
-          <DropdownMenuContent className="w-72 p-2 space-y-2">
+          <DropdownMenuContent className="w-[min(18rem,88vw)] p-2 space-y-2">
             {taskList.length === 0 ? (
               <p className="text-sm italic text-gray-600">No tasks yet</p>
             ) : (
               taskList.map((task) => (
                 <div
                   key={task.id}
-                  className="flex justify-between items-center bg-white/40 rounded px-2 py-1"
+                  className="flex justify-between items-center gap-2 bg-white/40 rounded px-2 py-1"
                 >
                   <span
-                    className={`${
+                    className={`min-w-0 break-words ${
                       task.completed
                         ? "line-through text-gray-500"
                         : "text-black"

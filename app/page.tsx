@@ -29,15 +29,15 @@ export default function Page() {
       }}
     >
       {/* Navbar */}
-      <header className="w-full px-6 py-4 flex items-center justify-end bg-[#D6DAC8] backdrop-blur-md sticky top-0 z-50">
-        <div className="flex gap-4 items-center">
+      <header className="w-full px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-end bg-[#D6DAC8] backdrop-blur-md sticky top-0 z-50">
+        <div className="flex gap-2 sm:gap-4 items-center">
           <UserProfile />
           <Setting />
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] py-10 gap-10">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100svh-64px)] w-full px-3 sm:px-6 py-6 sm:py-10 gap-6 sm:gap-10 overflow-x-hidden">
         <Timer />
         {mounted && !loading ? (user ? <UserTasks /> : <Tasks />) : <Tasks />}
       </div>

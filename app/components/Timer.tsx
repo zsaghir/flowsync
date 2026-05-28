@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useContext } from "react";
+import { useState, useEffect, useRef, useContext, type ReactNode } from "react";
 import { Break, PauseButton, PlayButton } from "./buttons";
 import Pomodoro from "./Pomodoro";
 import Stopwatch from "./Stopwatch";
@@ -21,6 +21,11 @@ function Timer() {
   const settingsInfo = useContext(SettingsContext)!;
   const { user, token } = useAuth();
 
+  // References of all the start times
+  const startRef = useRef(0);
+  const pauseRef = useRef(0);
+  const pauseElapsedRef = useRef(0);
+
   // ── countdown state ──────────────────────────────────────────────────────
   const [seconds, setSeconds] = useState(25 * 60);
   const [isPaused, setIsPaused] = useState(true);
@@ -30,13 +35,14 @@ function Timer() {
   const [motivationPulse, setMotivationPulse] = useState(false);
   const [speechBubble, setSpeechBubble] = useState("");
   const secondsRef = useRef(seconds);
+  const countdownStartSecondsRef = useRef(25 * 60);
   const isPausedRef = useRef(isPaused);
   const modeRef = useRef<Mode>(mode);
 
   // ── stopwatch state (lifted here so Timer owns all state) ─────────────────
   const [swElapsed, setSwElapsed] = useState(0);
   const [swRunning, setSwRunning] = useState(false);
-  const swElapsedRef = useRef(0);
+  const swElapsedRef = useRef(0); //we are using ref to make calculation without resetting
   const swRunningRef = useRef(false);
 
   // ── audio ─────────────────────────────────────────────────────────────────
@@ -142,6 +148,29 @@ function Timer() {
     }).catch(() => { });
   }
 
+  function resetClockRefs() {
+    startRef.current = 0;
+    pauseRef.current = 0;
+    pauseElapsedRef.current = 0;
+  }
+
+  function setCountdownTime(totalSeconds: number, remainingSeconds = totalSeconds) {
+    countdownStartSecondsRef.current = remainingSeconds;
+    secondsRef.current = remainingSeconds;
+    setSeconds(remainingSeconds);
+    setCountdownTotalSeconds(totalSeconds);
+  }
+
+  function elapsedWithDrift() {
+    if (startRef.current === 0) return 0;
+
+    const driftSec = (Date.now() - startRef.current + pauseElapsedRef.current) / 1000;
+    if (modeRef.current === "pomodoro" || modeRef.current === "break") {
+      return Math.max(0, Math.ceil(countdownStartSecondsRef.current - driftSec));
+    }
+
+    return Math.max(0, Math.floor(driftSec));
+  }
   // ── load saved timer when user logs in ───────────────────────────────────
   useEffect(() => {
     if (!user || !token) return;
@@ -158,35 +187,48 @@ function Timer() {
 
         if (state.mode === "stopwatch") {
           // Advance elapsed by however long it was running while away
-          const adj = state.isRunning
-            ? Math.floor(state.seconds + driftSec)
-            : state.seconds;
+          const adj = Math.max(0, Math.floor(
+            state.isRunning ? state.seconds + driftSec : state.seconds,
+          ));
           swElapsedRef.current = adj;
           setSwElapsed(adj);
           swRunningRef.current = state.isRunning;
           setSwRunning(state.isRunning);
+          if (adj > 0 || state.isRunning) {
+            startRef.current = Date.now() - adj * 1000;
+            pauseRef.current = state.isRunning ? 0 : Date.now();
+            pauseElapsedRef.current = 0;
+          } else {
+            resetClockRefs();
+          }
         } else {
           const full = state.mode === "pomodoro"
             ? settingsInfo.pomodoroTime * 60
             : settingsInfo.breakTime * 60;
-          setCountdownTotalSeconds(full);
 
           // Subtract drift from remaining seconds
-          const adj = state.isRunning
-            ? Math.max(0, Math.floor(state.seconds - driftSec))
-            : state.seconds;
+          const adj = Math.max(0, Math.ceil(
+            state.isRunning ? state.seconds - driftSec : state.seconds,
+          ));
+          const total = Math.max(full, adj);
 
           if (adj <= 0 && state.isRunning) {
             // Timer fully expired while away — reset to paused at full time
-            secondsRef.current = full;
-            setSeconds(full);
+            setCountdownTime(full);
             isPausedRef.current = true;
             setIsPaused(true);
+            resetClockRefs();
           } else {
-            secondsRef.current = adj;
-            setSeconds(adj);
+            setCountdownTime(total, adj);
             isPausedRef.current = !state.isRunning;
             setIsPaused(!state.isRunning);
+            if (state.isRunning) {
+              startRef.current = Date.now();
+              pauseRef.current = 0;
+              pauseElapsedRef.current = 0;
+            } else {
+              resetClockRefs();
+            }
           }
         }
       })
@@ -210,9 +252,8 @@ function Timer() {
       }
       setMode(next);
       modeRef.current = next;
-      setSeconds(nextSec);
-      secondsRef.current = nextSec;
-      setCountdownTotalSeconds(nextSec);
+      resetClockRefs();
+      setCountdownTime(nextSec);
       setCompletedPulse(true);
       showSpeech(finishedMode === "pomodoro" ? "Nice work!" : "You got this!");
       save();
@@ -221,27 +262,32 @@ function Timer() {
     // Sync seconds when settings change (only if paused — don't interrupt running timer)
     if (isPausedRef.current) {
       if (modeRef.current === "pomodoro") {
-        secondsRef.current = settingsInfo.pomodoroTime * 60;
-        setSeconds(secondsRef.current);
-        setCountdownTotalSeconds(secondsRef.current);
+        resetClockRefs();
+        setCountdownTime(settingsInfo.pomodoroTime * 60);
       }
       if (modeRef.current === "break") {
-        secondsRef.current = settingsInfo.breakTime * 60;
-        setSeconds(secondsRef.current);
-        setCountdownTotalSeconds(secondsRef.current);
+        resetClockRefs();
+        setCountdownTime(settingsInfo.breakTime * 60);
       }
     }
 
     const interval = setInterval(() => {
       if (modeRef.current === "stopwatch") {
         if (!swRunningRef.current) return;
-        swElapsedRef.current++;
+        swElapsedRef.current = elapsedWithDrift();
         setSwElapsed(swElapsedRef.current);
         return;
       }
       if (isPausedRef.current) return;
-      if (secondsRef.current === 0) { switchMode(); return; }
-      secondsRef.current--;
+      const nextSeconds = elapsedWithDrift();
+      if (nextSeconds <= 0) {
+        secondsRef.current = 0;
+        setSeconds(0);
+        switchMode();
+        return;
+      }
+      secondsRef.current = nextSeconds;
+
       setSeconds(secondsRef.current);
     }, 1000);
 
@@ -251,7 +297,7 @@ function Timer() {
   // ── periodic save every 30 s while running ───────────────────────────────
   useEffect(() => {
     if (!isRunning) return;
-    const id = setInterval(save, 300_000);
+    const id = setInterval(save, 30_000);
     return () => clearInterval(id);
   }, [isRunning]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -272,10 +318,9 @@ function Timer() {
     setIsPaused(true); isPausedRef.current = true;
     setSwRunning(false); swRunningRef.current = false;
     setMode(newMode); modeRef.current = newMode;
+    resetClockRefs();
     if (newSeconds !== undefined) {
-      setSeconds(newSeconds);
-      secondsRef.current = newSeconds;
-      setCountdownTotalSeconds(newSeconds);
+      setCountdownTime(newSeconds);
     }
     save();
   }
@@ -283,8 +328,10 @@ function Timer() {
   function handleStartBreak(breakMinutes: number) {
     const secs = breakMinutes * 60;
     setMode("break"); modeRef.current = "break";
-    setSeconds(secs); secondsRef.current = secs;
-    setCountdownTotalSeconds(secs);
+    setCountdownTime(secs);
+    startRef.current = Date.now();
+    pauseRef.current = 0;
+    pauseElapsedRef.current = 0;
     setIsPaused(false); isPausedRef.current = false;
     showSpeech("Break time!");
     save();
@@ -292,7 +339,7 @@ function Timer() {
 
   // ── tab lock helper ───────────────────────────────────────────────────────
   // Wraps a tab button: dims + blocks clicks when another timer is running
-  function TabSlot({ forMode, children }: { forMode: Mode; children: React.ReactNode }) {
+  function TabSlot({ forMode, children }: { forMode: Mode; children: ReactNode }) {
     const locked = isRunning && mode !== forMode;
     return (
       <div className={locked ? "opacity-40 cursor-not-allowed pointer-events-none select-none" : ""}>
@@ -304,16 +351,19 @@ function Timer() {
   const minutes = Math.floor(seconds / 60);
   const remSec = seconds % 60;
   const formatted = `${String(minutes).padStart(2, "0")}:${String(remSec).padStart(2, "0")}`;
+  useEffect(() => {
+    document.title = `${formatted} - FlowSync`;
+  }, [formatted]);
 
   return (
-    <Card bg="#9CAFAA" className="timer-card-with-mascot px-10 py-8 items-center flex flex-col">
+    <Card bg="#9CAFAA" className="timer-card-with-mascot w-[min(92vw,620px)] px-4 sm:px-10 py-6 sm:py-8 items-center flex flex-col">
       <BunnyMascot src={bunnySrc} message={speechBubble} />
-      <div className="flex flex-col items-center justify-center">
+      <div className="flex flex-col items-center justify-center w-full">
         <audio ref={audioRef} preload="none" className="hidden" />
         <audio ref={bellRef} src="/mixkit-notification-bell-592.wav" preload="none" className="hidden" />
 
         {/* Mode tabs */}
-        <div className="flex space-x-3 mt-2">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-2 w-full">
           <TabSlot forMode="break">
             <Break onClick={() => switchToMode("break", settingsInfo.breakTime * 60)} />
           </TabSlot>
@@ -335,12 +385,21 @@ function Timer() {
             elapsed={swElapsed}
             running={swRunning}
             onStart={() => {
+              if (startRef.current === 0) {
+                startRef.current = Date.now() - swElapsedRef.current * 1000;
+              } else if (pauseRef.current > 0) {
+                pauseElapsedRef.current -= (Date.now() - pauseRef.current);
+                pauseRef.current = 0;
+              }
               swRunningRef.current = true;
               setSwRunning(true);
               showRandomStartSpeech();
               save();
             }}
             onStop={() => {
+              swElapsedRef.current = elapsedWithDrift();
+              setSwElapsed(swElapsedRef.current);
+              pauseRef.current = Date.now();
               swRunningRef.current = false;
               setSwRunning(false);
               if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
@@ -348,6 +407,7 @@ function Timer() {
             }}
             onReset={() => {
               swRunningRef.current = false;
+              resetClockRefs();
               swElapsedRef.current = 0;
               setSwRunning(false);
               setSwElapsed(0);
@@ -358,9 +418,16 @@ function Timer() {
           />
         ) : (
           <>
-            <p className="text-9xl font-extrabold my-4 tracking-widest">{formatted}</p>
+            <p className="text-[clamp(3.25rem,18vw,8rem)] sm:text-9xl font-extrabold my-4 tracking-normal sm:tracking-widest leading-none">{formatted}</p>
             {isPaused ? (
               <PlayButton onClick={() => {
+                if (startRef.current === 0) {
+                  countdownStartSecondsRef.current = secondsRef.current;
+                  startRef.current = Date.now();
+                } else if (pauseRef.current > 0) {
+                  pauseElapsedRef.current -= (Date.now() - pauseRef.current);
+                  pauseRef.current = 0;
+                }
                 setIsPaused(false);
                 isPausedRef.current = false;
                 if (mode === "break") {
@@ -372,6 +439,9 @@ function Timer() {
               }} />
             ) : (
               <PauseButton onClick={() => {
+                secondsRef.current = elapsedWithDrift();
+                setSeconds(secondsRef.current);
+                pauseRef.current = Date.now();
                 setIsPaused(true);
                 isPausedRef.current = true;
                 save();
@@ -430,7 +500,7 @@ function PixelHourglass({
     }, intervalMs);
 
     return () => window.clearInterval(id);
-  }, [mode, reducedMotion, state]);
+  }, [mode, reducedMotion, state, totalDurationSeconds]);
 
   const src = `/assets/sprites/hourglass-frame-${frame}.png`;
   return <img className={className} src={src} alt="" aria-hidden="true" draggable="false" />;

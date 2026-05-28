@@ -78,7 +78,7 @@ const UserProfile = () => {
       </Button>
 
       <Popup isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <div className="p-4 flex flex-col gap-3 w-72">
+        <div className="p-4 flex flex-col gap-3 w-[min(18rem,88vw)]">
           <div className="flex gap-1">
             {(["login", "register"] as const).map((m) => (
               <button key={m} onClick={() => { setMode(m); setError(""); }}
