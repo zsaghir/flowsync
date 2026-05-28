@@ -9,6 +9,14 @@ import { Card, Button } from "pixel-retroui";
 
 type Mode = "pomodoro" | "break" | "stopwatch";
 
+const START_MESSAGES = [
+  "You got this!",
+  "One focus block!",
+  "Keep going!",
+  "Tiny steps!",
+  "Stay with it!",
+];
+
 function Timer() {
   const settingsInfo = useContext(SettingsContext)!;
   const { user, token } = useAuth();
@@ -17,6 +25,10 @@ function Timer() {
   const [seconds, setSeconds] = useState(25 * 60);
   const [isPaused, setIsPaused] = useState(true);
   const [mode, setMode] = useState<Mode>("stopwatch");
+  const [countdownTotalSeconds, setCountdownTotalSeconds] = useState(25 * 60);
+  const [completedPulse, setCompletedPulse] = useState(false);
+  const [motivationPulse, setMotivationPulse] = useState(false);
+  const [speechBubble, setSpeechBubble] = useState("");
   const secondsRef = useRef(seconds);
   const isPausedRef = useRef(isPaused);
   const modeRef = useRef<Mode>(mode);
@@ -39,6 +51,81 @@ function Timer() {
 
   // ── is any timer actively running right now? ──────────────────────────────
   const isRunning = mode === "stopwatch" ? swRunning : !isPaused;
+  const hourglassState = completedPulse
+    ? "completed"
+    : isRunning
+      ? "running"
+      : "paused";
+  const bunnySrc = completedPulse
+    ? "/assets/sprites/bunny-complete.png"
+    : motivationPulse
+      ? "/assets/sprites/bunny-motivation.png"
+      : mode === "break"
+        ? "/assets/sprites/bunny-break.png"
+        : "/assets/sprites/bunny-pomodoro.png";
+
+  function shouldPlayMusic() {
+    return (
+      isRunning &&
+      (mode === "pomodoro" || mode === "stopwatch") &&
+      Boolean(settingsInfo.music) &&
+      settingsInfo.music !== "None"
+    );
+  }
+
+  function stopMusic() {
+    if (!audioRef.current) return;
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+  }
+
+  function playSavedMusic() {
+    if (!audioRef.current || !settingsInfo.music || settingsInfo.music === "None") return;
+    audioRef.current.src = settingsInfo.music;
+    audioRef.current.loop = true;
+    audioRef.current.currentTime = 0;
+    audioRef.current.play().catch(() => { });
+  }
+
+  function showSpeech(message: string, useMotivationBunny = false) {
+    setSpeechBubble(message);
+    if (useMotivationBunny) {
+      setMotivationPulse(true);
+    }
+  }
+
+  function showRandomStartSpeech() {
+    const message = START_MESSAGES[Math.floor(Math.random() * START_MESSAGES.length)];
+    showSpeech(message, true);
+  }
+
+  useEffect(() => {
+    if (!speechBubble) return;
+    const id = window.setTimeout(() => setSpeechBubble(""), 4000);
+    return () => window.clearTimeout(id);
+  }, [speechBubble]);
+
+  useEffect(() => {
+    if (!motivationPulse) return;
+    const id = window.setTimeout(() => setMotivationPulse(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [motivationPulse]);
+
+  useEffect(() => {
+    if (!completedPulse) return;
+    const id = window.setTimeout(() => setCompletedPulse(false), 4000);
+    return () => window.clearTimeout(id);
+  }, [completedPulse]);
+
+  useEffect(() => {
+    function handleTasksComplete() {
+      setCompletedPulse(true);
+      showSpeech("All done!");
+    }
+
+    window.addEventListener("flowsync:tasks-complete", handleTasksComplete);
+    return () => window.removeEventListener("flowsync:tasks-complete", handleTasksComplete);
+  }, []);
 
   // ── persist timer state to server (fire-and-forget) ──────────────────────
   function save() {
@@ -79,6 +166,11 @@ function Timer() {
           swRunningRef.current = state.isRunning;
           setSwRunning(state.isRunning);
         } else {
+          const full = state.mode === "pomodoro"
+            ? settingsInfo.pomodoroTime * 60
+            : settingsInfo.breakTime * 60;
+          setCountdownTotalSeconds(full);
+
           // Subtract drift from remaining seconds
           const adj = state.isRunning
             ? Math.max(0, Math.floor(state.seconds - driftSec))
@@ -86,9 +178,6 @@ function Timer() {
 
           if (adj <= 0 && state.isRunning) {
             // Timer fully expired while away — reset to paused at full time
-            const full = state.mode === "pomodoro"
-              ? settingsInfo.pomodoroTime * 60
-              : settingsInfo.breakTime * 60;
             secondsRef.current = full;
             setSeconds(full);
             isPausedRef.current = true;
@@ -107,12 +196,14 @@ function Timer() {
   // ── main interval: countdown + stopwatch ticking ─────────────────────────
   useEffect(() => {
     function switchMode() {
+      const finishedMode = modeRef.current;
       const next = modeRef.current === "pomodoro" ? "break" : "pomodoro";
       const nextSec = next === "pomodoro"
         ? settingsInfo.pomodoroTime * 60
         : settingsInfo.breakTime * 60;
       isPausedRef.current = true;
       setIsPaused(true);
+      stopMusic();
       if (bellRef.current) {
         bellRef.current.currentTime = 0;
         bellRef.current.play().catch(() => { });
@@ -121,13 +212,24 @@ function Timer() {
       modeRef.current = next;
       setSeconds(nextSec);
       secondsRef.current = nextSec;
+      setCountdownTotalSeconds(nextSec);
+      setCompletedPulse(true);
+      showSpeech(finishedMode === "pomodoro" ? "Nice work!" : "You got this!");
       save();
     }
 
     // Sync seconds when settings change (only if paused — don't interrupt running timer)
     if (isPausedRef.current) {
-      if (modeRef.current === "pomodoro") { secondsRef.current = settingsInfo.pomodoroTime * 60; setSeconds(secondsRef.current); }
-      if (modeRef.current === "break") { secondsRef.current = settingsInfo.breakTime * 60; setSeconds(secondsRef.current); }
+      if (modeRef.current === "pomodoro") {
+        secondsRef.current = settingsInfo.pomodoroTime * 60;
+        setSeconds(secondsRef.current);
+        setCountdownTotalSeconds(secondsRef.current);
+      }
+      if (modeRef.current === "break") {
+        secondsRef.current = settingsInfo.breakTime * 60;
+        setSeconds(secondsRef.current);
+        setCountdownTotalSeconds(secondsRef.current);
+      }
     }
 
     const interval = setInterval(() => {
@@ -144,7 +246,7 @@ function Timer() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [settingsInfo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [settingsInfo.pomodoroTime, settingsInfo.breakTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── periodic save every 30 s while running ───────────────────────────────
   useEffect(() => {
@@ -153,23 +255,28 @@ function Timer() {
     return () => clearInterval(id);
   }, [isRunning]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── helpers ───────────────────────────────────────────────────────────────
-  function handleMusicChange() {
-    if (audioRef.current && settingsInfo.music && settingsInfo.music !== "None") {
-      audioRef.current.src = settingsInfo.music;
-      audioRef.current.loop = true;
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => { });
+  useEffect(() => {
+    if (!shouldPlayMusic()) {
+      stopMusic();
+      return;
     }
-  }
 
+    playSavedMusic();
+    return stopMusic;
+  }, [isRunning, mode, settingsInfo.music]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── helpers ───────────────────────────────────────────────────────────────
   function switchToMode(newMode: Mode, newSeconds?: number) {
     if (isRunning) return; // blocked while any timer is running
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    stopMusic();
     setIsPaused(true); isPausedRef.current = true;
     setSwRunning(false); swRunningRef.current = false;
     setMode(newMode); modeRef.current = newMode;
-    if (newSeconds !== undefined) { setSeconds(newSeconds); secondsRef.current = newSeconds; }
+    if (newSeconds !== undefined) {
+      setSeconds(newSeconds);
+      secondsRef.current = newSeconds;
+      setCountdownTotalSeconds(newSeconds);
+    }
     save();
   }
 
@@ -177,7 +284,9 @@ function Timer() {
     const secs = breakMinutes * 60;
     setMode("break"); modeRef.current = "break";
     setSeconds(secs); secondsRef.current = secs;
+    setCountdownTotalSeconds(secs);
     setIsPaused(false); isPausedRef.current = false;
+    showSpeech("Break time!");
     save();
   }
 
@@ -197,7 +306,8 @@ function Timer() {
   const formatted = `${String(minutes).padStart(2, "0")}:${String(remSec).padStart(2, "0")}`;
 
   return (
-    <Card bg="#9CAFAA" className="px-10 py-8 items-center flex flex-col">
+    <Card bg="#9CAFAA" className="timer-card-with-mascot px-10 py-8 items-center flex flex-col">
+      <BunnyMascot src={bunnySrc} message={speechBubble} />
       <div className="flex flex-col items-center justify-center">
         <audio ref={audioRef} preload="none" className="hidden" />
         <audio ref={bellRef} src="/mixkit-notification-bell-592.wav" preload="none" className="hidden" />
@@ -217,6 +327,7 @@ function Timer() {
               STOPWATCH
             </Button>
           </TabSlot>
+          <PixelHourglass mode={mode} state={hourglassState} totalDurationSeconds={countdownTotalSeconds} />
         </div>
 
         {mode === "stopwatch" ? (
@@ -226,7 +337,7 @@ function Timer() {
             onStart={() => {
               swRunningRef.current = true;
               setSwRunning(true);
-              handleMusicChange();
+              showRandomStartSpeech();
               save();
             }}
             onStop={() => {
@@ -252,14 +363,17 @@ function Timer() {
               <PlayButton onClick={() => {
                 setIsPaused(false);
                 isPausedRef.current = false;
-                handleMusicChange();
+                if (mode === "break") {
+                  showSpeech("Break time!");
+                } else {
+                  showRandomStartSpeech();
+                }
                 save();
               }} />
             ) : (
               <PauseButton onClick={() => {
                 setIsPaused(true);
                 isPausedRef.current = true;
-                if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
                 save();
               }} />
             )}
@@ -267,6 +381,69 @@ function Timer() {
         )}
       </div>
     </Card>
+  );
+}
+
+function PixelHourglass({
+  mode,
+  state,
+  totalDurationSeconds,
+}: {
+  mode: Mode;
+  state: "running" | "paused" | "completed";
+  totalDurationSeconds: number;
+}) {
+  const [frame, setFrame] = useState(1);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const className = [
+    "pixel-hourglass",
+    state,
+    mode === "break" ? "break-mode" : "",
+    mode === "stopwatch" ? "stopwatch-mode" : "",
+  ].filter(Boolean).join(" ");
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    function updateReducedMotion() {
+      setReducedMotion(media.matches);
+    }
+
+    updateReducedMotion();
+    media.addEventListener("change", updateReducedMotion);
+    return () => media.removeEventListener("change", updateReducedMotion);
+  }, []);
+
+  useEffect(() => {
+    if (state === "completed") {
+      setFrame(6);
+      return;
+    }
+
+    if (state !== "running" || reducedMotion) {
+      return;
+    }
+
+    const countdownFrameDelayMs = ((totalDurationSeconds / 4) * 1000) / 6;
+    const intervalMs = mode === "stopwatch" ? 250 : Math.max(250, countdownFrameDelayMs);
+    const id = window.setInterval(() => {
+      setFrame((current) => (current === 6 ? 1 : current + 1));
+    }, intervalMs);
+
+    return () => window.clearInterval(id);
+  }, [mode, reducedMotion, state]);
+
+  const src = `/assets/sprites/hourglass-frame-${frame}.png`;
+  return <img className={className} src={src} alt="" aria-hidden="true" draggable="false" />;
+}
+
+function BunnyMascot({ src, message }: { src: string; message: string }) {
+  return (
+    <div className="bunny-mascot-wrap" aria-hidden="true">
+      <div className={`bunny-speech-bubble ${message ? "show" : ""}`}>
+        {message}
+      </div>
+      <img className="bunny-mascot" src={src} alt="" draggable="false" />
+    </div>
   );
 }
 

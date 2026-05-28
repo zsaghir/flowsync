@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/app/components/Contexts";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, Input, Button,
@@ -11,6 +11,7 @@ const UserTasks = () => {
   const { token } = useAuth();
   const [taskList, setTaskList]   = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState("");
+  const announcedCompleteRef = useRef(false);
 
   const authHeader = { Authorization: `Bearer ${token}` };
 
@@ -21,6 +22,17 @@ const UserTasks = () => {
       .then(setTaskList)
       .catch(() => {});
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const allComplete = taskList.length > 0 && taskList.every((task) => task.completed);
+    if (allComplete && !announcedCompleteRef.current) {
+      window.dispatchEvent(new CustomEvent("flowsync:tasks-complete"));
+      announcedCompleteRef.current = true;
+    }
+    if (!allComplete) {
+      announcedCompleteRef.current = false;
+    }
+  }, [taskList]);
 
   const addTask = async () => {
     if (!taskInput.trim()) return;

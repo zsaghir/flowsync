@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   DropdownMenuContent,
   DropdownMenu,
@@ -13,6 +13,18 @@ const Tasks = () => {
   const [taskList, setTaskList] = useState<
     { completed: boolean; id: number; title: string }[]
   >([]);
+  const announcedCompleteRef = useRef(false);
+
+  useEffect(() => {
+    const allComplete = taskList.length > 0 && taskList.every((task) => task.completed);
+    if (allComplete && !announcedCompleteRef.current) {
+      window.dispatchEvent(new CustomEvent("flowsync:tasks-complete"));
+      announcedCompleteRef.current = true;
+    }
+    if (!allComplete) {
+      announcedCompleteRef.current = false;
+    }
+  }, [taskList]);
 
   const addTask = () => {
     if (taskInput.trim() !== "") {
