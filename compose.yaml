@@ -1,0 +1,9 @@
+services:
+  flowsync:
+    container_name: flowsync
+    build: .
+    image: skandarajeev/flowsync:latest
+    ports:
+      - "5252:3000"
+    volumes:
+      - "./data/:/app/data"

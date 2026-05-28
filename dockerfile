@@ -14,7 +14,7 @@ EXPOSE 3000
 
 CMD ["node", "node_modules/.bin/next", "start"]
 
-FROM node:18-alpine AS runner
+FROM node:lts-alpine3.23 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
