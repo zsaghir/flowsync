@@ -29,12 +29,7 @@ export default function Page() {
       }}
     >
       {/* Navbar */}
-      <header className="w-full px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-[#D6DAC8] sticky top-0 z-50">
-        <img
-          src="/flowsync-hourglass.svg"
-          alt="FlowSync"
-          className="h-6 sm:h-10 w-auto max-w-[120px] sm:max-w-[160px] shrink-0"
-        />
+      <header className="w-full px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-end bg-[#D6DAC8] backdrop-blur-md sticky top-0 z-50">
         <div className="flex gap-2 sm:gap-4 items-center">
           <UserProfile />
           <Setting />

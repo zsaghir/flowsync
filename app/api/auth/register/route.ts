@@ -5,20 +5,20 @@ import { db } from "@/server/db";
 import { signToken } from "@/server/auth";
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const { username, password } = await req.json();
 
-  if (!email || !password)
-    return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+  if (!username || !password)
+    return NextResponse.json({ error: "username and password required" }, { status: 400 });
 
-  if (db.getUser(email))
-    return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+  if (db.getUser(username))
+    return NextResponse.json({ error: "username already registered" }, { status: 409 });
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = { id: randomUUID(), email, passwordHash };
+  const user = { id: randomUUID(), username, passwordHash };
   db.createUser(user);
 
   return NextResponse.json({
     token: signToken(user.id),
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, username: user.username },
   });
 }

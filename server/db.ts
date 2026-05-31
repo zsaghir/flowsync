@@ -1,14 +1,16 @@
 import fs from "fs";
 import path from "path";
 
-const DB_PATH = path.join(process.cwd(), "data", "db.json");
+//process.env.NODE_ENV === "development" ? "db.dev.json" : "db.json";
 
-export type User       = { id: string; email: string; passwordHash: string };
-export type Task       = { id: string; title: string; completed: boolean; userId: string };
+const DB_PATH = (process.env.NODE_ENV === "production") ? path.join(process.cwd(), "data", "db.json") : path.join(process.cwd(), "data", "test.json")
+
+export type User = { id: string; username: string; passwordHash: string, wrappedDataKey: string, salt: String, nonce: String };
+export type Task = { id: string; title: string; completed: boolean; userId: string };
 export type TimerState = {
-  userId:    string;
-  mode:      "pomodoro" | "break" | "stopwatch";
-  seconds:   number;   // remaining for countdown; elapsed for stopwatch
+  userId: string;
+  mode: "pomodoro" | "break" | "stopwatch";
+  seconds: number;   // remaining for countdown; elapsed for stopwatch
   isRunning: boolean;
   lastSaved: number;   // Date.now() ms — used to recalculate on resume
 };
@@ -29,12 +31,12 @@ function write(data: DB) {
 }
 
 export const db = {
-  getUser:     (email: string) => read().users.find((u) => u.email === email) ?? null,
-  getUserById: (id: string)    => read().users.find((u) => u.id === id) ?? null,
-  createUser:  (user: User)    => { const d = read(); d.users.push(user); write(d); },
+  getUser: (username: string) => read().users.find((u) => u.username === username) ?? null,
+  getUserById: (id: string) => read().users.find((u) => u.id === id) ?? null,
+  createUser: (user: User) => { const d = read(); d.users.push(user); write(d); },
 
-  getTasks:   (userId: string) => read().tasks.filter((t) => t.userId === userId),
-  createTask: (task: Task)     => { const d = read(); d.tasks.push(task); write(d); return task; },
+  getTasks: (userId: string) => read().tasks.filter((t) => t.userId === userId),
+  createTask: (task: Task) => { const d = read(); d.tasks.push(task); write(d); return task; },
 
   updateTask: (id: string, userId: string, patch: Partial<Task>) => {
     const d = read();
