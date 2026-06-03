@@ -9,10 +9,14 @@ type Task = { id: string; title: string; completed: boolean };
 
 const UserTasks = () => {
   const { token, clearAuth } = useAuth();
-  const [taskList, setTaskList]   = useState<Task[]>([]);
+  const [taskList, setTaskList] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState("");
   const announcedCompleteRef = useRef(false);
-
+  const undoneTaskCount = taskList.filter((task) => !
+    task.completed).length;
+  const sortedTasks = [...taskList].sort(
+    (a, b) => Number(a.completed) - Number(b.completed)
+  );
   const authHeader: Record<string, string> = token
     ? { Authorization: `Bearer ${token}` }
     : {};
@@ -65,10 +69,10 @@ const UserTasks = () => {
     const tempId = `tmp-${Date.now()}`;
     setTaskList((p) => [...p, { id: tempId, title, completed: false }]);
     try {
-      const res  = await fetch("/api/tasks", {
-        method:  "POST",
+      const res = await fetch("/api/tasks", {
+        method: "POST",
         headers: { "Content-Type": "application/json", ...authHeader },
-        body:    JSON.stringify({ title }),
+        body: JSON.stringify({ title }),
       });
       const saved = await res.json();
       if (!res.ok || !saved?.id) {
@@ -85,18 +89,18 @@ const UserTasks = () => {
     setTaskList((p) => p.map((t) => (t.id === id ? { ...t, completed } : t)));
     try {
       await fetch(`/api/tasks/${id}`, {
-        method:  "PATCH",
+        method: "PATCH",
         headers: { "Content-Type": "application/json", ...authHeader },
-        body:    JSON.stringify({ completed }),
+        body: JSON.stringify({ completed }),
       });
-    } catch {}
+    } catch { }
   };
 
   const deleteTask = async (id: string) => {
     setTaskList((p) => p.filter((t) => t.id !== id));
     try {
       await fetch(`/api/tasks/${id}`, { method: "DELETE", headers: authHeader });
-    } catch {}
+    } catch { }
   };
 
   return (
@@ -112,12 +116,12 @@ const UserTasks = () => {
         </Button>
 
         <DropdownMenu bg="#D6DAC8" textColor="black" borderColor="black" shadowColor="#30210b">
-          <DropdownMenuTrigger>Tasks ({taskList.length})</DropdownMenuTrigger>
+          <DropdownMenuTrigger>Tasks ({undoneTaskCount})</DropdownMenuTrigger>
           <DropdownMenuContent className="w-[min(18rem,88vw)] p-2 space-y-2">
             {taskList.length === 0 ? (
               <p className="text-sm italic text-gray-600">No tasks yet</p>
             ) : (
-              taskList.map((task) => (
+              sortedTasks.map((task) => (
                 <div key={task.id} className="flex justify-between items-center gap-2 bg-white/40 rounded px-2 py-1">
                   <span className={`${task.completed ? "line-through text-gray-500" : "text-black"} min-w-0 break-words`}>
                     • {task.title}

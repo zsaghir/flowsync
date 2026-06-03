@@ -347,13 +347,14 @@ function Timer() {
       </div>
     );
   }
-
-  const minutes = Math.floor(seconds / 60);
-  const remSec = seconds % 60;
+  //Changing the tab title when needed
+  const minutes = (modeRef.current === "stopwatch") ? Math.floor(swElapsed / 60) : Math.floor(seconds / 60);
+  const remSec = (modeRef.current === "stopwatch") ? Math.floor(swElapsed % 60) : Math.floor(seconds % 60);
   const formatted = `${String(minutes).padStart(2, "0")}:${String(remSec).padStart(2, "0")}`;
   useEffect(() => {
     document.title = `${formatted} - FlowSync`;
   }, [formatted]);
+
 
   return (
     <Card bg="#9CAFAA" className="timer-card-with-mascot w-[min(92vw,620px)] px-4 sm:px-10 py-6 sm:py-8 items-center flex flex-col">

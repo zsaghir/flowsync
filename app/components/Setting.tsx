@@ -9,6 +9,7 @@ const musicOptions = [
   { label: "Focus", value: "/focus.mp3" },
   { label: "Lo-fi", value: "/jazz.mp3" },
   { label: "Rain", value: "/rain.mp3" },
+  { label: "Brown-Noise", value: "/brownNoise.mp3" }
 ];
 
 const Setting = () => {
@@ -101,8 +102,8 @@ const Setting = () => {
                       setMusicOpen(false);
                     }}
                     className={`px-4 py-2 cursor-pointer border-b border-white last:border-none hover:bg-[#D6A99D] hover:text-black text-white ${tempmusic === option.value
-                        ? "text-[#D6A99D] bg-[#D6A99D]"
-                        : ""
+                      ? "text-[#D6A99D] bg-[#D6A99D]"
+                      : ""
                       }`}
                   >
                     {option.label}
