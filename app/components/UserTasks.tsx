@@ -117,7 +117,7 @@ const UserTasks = () => {
 
         <DropdownMenu bg="#D6DAC8" textColor="black" borderColor="black" shadowColor="#30210b">
           <DropdownMenuTrigger>Tasks ({undoneTaskCount})</DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[min(18rem,88vw)] p-2 space-y-2">
+          <DropdownMenuContent className="w-[min(18rem,88vw)] p-2 space-y-2 max-sm:!fixed max-sm:!left-1/2 max-sm:!top-1/2 max-sm:!-translate-x-1/2 max-sm:!-translate-y-1/2 max-sm:!z-50">
             {taskList.length === 0 ? (
               <p className="text-sm italic text-gray-600">No tasks yet</p>
             ) : (
