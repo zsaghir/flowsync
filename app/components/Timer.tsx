@@ -70,13 +70,13 @@ function Timer() {
         ? "/assets/sprites/bunny-break.png"
         : "/assets/sprites/bunny-pomodoro.png";
 
+  function musicForMode(m: Mode) {
+    return m === "break" ? settingsInfo.breakMusic : settingsInfo.workMusic;
+  }
+
   function shouldPlayMusic() {
-    return (
-      isRunning &&
-      (mode === "pomodoro" || mode === "stopwatch") &&
-      Boolean(settingsInfo.music) &&
-      settingsInfo.music !== "None"
-    );
+    const choice = musicForMode(mode);
+    return isRunning && Boolean(choice) && choice !== "None";
   }
 
   function stopMusic() {
@@ -86,9 +86,12 @@ function Timer() {
   }
 
   function playSavedMusic() {
-    if (!audioRef.current || !settingsInfo.music || settingsInfo.music === "None") return;
-    audioRef.current.src = settingsInfo.music;
+    if (!audioRef.current) return;
+    const choice = musicForMode(mode);
+    if (!choice || choice === "None") return;
+    audioRef.current.src = choice;
     audioRef.current.loop = true;
+    audioRef.current.volume = settingsInfo.volume;
     audioRef.current.currentTime = 0;
     audioRef.current.play().catch(() => { });
   }
@@ -309,7 +312,13 @@ function Timer() {
 
     playSavedMusic();
     return stopMusic;
-  }, [isRunning, mode, settingsInfo.music]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isRunning, mode, settingsInfo.workMusic, settingsInfo.breakMusic]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply volume changes live without restarting playback.
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = settingsInfo.volume;
+    if (bellRef.current) bellRef.current.volume = settingsInfo.volume;
+  }, [settingsInfo.volume]);
 
   // ── helpers ───────────────────────────────────────────────────────────────
   function switchToMode(newMode: Mode, newSeconds?: number) {
