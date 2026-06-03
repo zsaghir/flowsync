@@ -4,6 +4,7 @@ import { SettingsContext } from "./components/Contexts";
 import Tasks from "./components/Tasks";
 import UserProfile from "./components/UserProfile";
 import Setting from "./components/Setting";
+import BoomBox from "./components/BoomBox";
 import UserTasks from "./components/UserTasks";
 import { useAuth } from "@/app/components/Contexts";
 import Timer from "./components/Timer";
@@ -11,7 +12,9 @@ import Timer from "./components/Timer";
 export default function Page() {
   const [pomodoroTime, setPomodoroTime] = useState(25);
   const [breakTime, setBreakTime] = useState(5);
-  const [music, setMusic] = useState("None");
+  const [workMusic, setWorkMusic] = useState("None");
+  const [breakMusic, setBreakMusic] = useState("None");
+  const [volume, setVolume] = useState(0.6);
   const { user, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
@@ -24,14 +27,19 @@ export default function Page() {
         setPomodoroTime,
         breakTime,
         setBreakTime,
-        music,
-        setMusic,
+        workMusic,
+        setWorkMusic,
+        breakMusic,
+        setBreakMusic,
+        volume,
+        setVolume,
       }}
     >
       {/* Navbar */}
       <header className="w-full px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-end bg-[#D6DAC8] backdrop-blur-md sticky top-0 z-50">
         <div className="flex gap-2 sm:gap-4 items-center">
           <UserProfile />
+          <BoomBox />
           <Setting />
         </div>
       </header>

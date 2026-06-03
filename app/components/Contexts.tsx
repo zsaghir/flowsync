@@ -18,8 +18,12 @@ type SettingsType = {
   setPomodoroTime: (time: number) => void;
   breakTime: number;
   setBreakTime: (time: number) => void;
-  music?: string;
-  setMusic?: (music: string) => void;
+  workMusic: string;
+  setWorkMusic: (music: string) => void;
+  breakMusic: string;
+  setBreakMusic: (music: string) => void;
+  volume: number;
+  setVolume: (volume: number) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -35,8 +39,12 @@ export const SettingsContext = createContext<SettingsType>({
   setPomodoroTime: () => { },
   breakTime: 5,
   setBreakTime: () => { },
-  music: "None",
-  setMusic: () => { },
+  workMusic: "None",
+  setWorkMusic: () => { },
+  breakMusic: "None",
+  setBreakMusic: () => { },
+  volume: 0.6,
+  setVolume: () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {

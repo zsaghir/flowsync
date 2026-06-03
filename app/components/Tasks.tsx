@@ -15,6 +15,11 @@ const Tasks = () => {
   >([]);
   const announcedCompleteRef = useRef(false);
 
+  const undoneTaskCount = taskList.filter((task) => !task.completed).length;
+  const sortedTasks = [...taskList].sort(
+    (a, b) => Number(a.completed) - Number(b.completed)
+  ); //Swaps the task when a is completed and b is not so completed task comes first
+
   useEffect(() => {
     const allComplete = taskList.length > 0 && taskList.every((task) => task.completed);
     if (allComplete && !announcedCompleteRef.current) {
@@ -80,23 +85,22 @@ const Tasks = () => {
           borderColor="black"
           shadowColor="#30210b"
         >
-          <DropdownMenuTrigger>Tasks ({taskList.length})</DropdownMenuTrigger>
+          <DropdownMenuTrigger>Tasks ({undoneTaskCount})</DropdownMenuTrigger>
 
-          <DropdownMenuContent className="w-[min(18rem,88vw)] p-2 space-y-2">
+          <DropdownMenuContent className="w-[min(18rem,88vw)] p-2 space-y-2 max-sm:!fixed max-sm:!left-1/2 max-sm:!top-1/2 max-sm:!-translate-x-1/2 max-sm:!-translate-y-1/2 max-sm:!z-50">
             {taskList.length === 0 ? (
               <p className="text-sm italic text-gray-600">No tasks yet</p>
             ) : (
-              taskList.map((task) => (
+              sortedTasks.map((task) => (
                 <div
                   key={task.id}
                   className="flex justify-between items-center gap-2 bg-white/40 rounded px-2 py-1"
                 >
                   <span
-                    className={`min-w-0 break-words ${
-                      task.completed
-                        ? "line-through text-gray-500"
-                        : "text-black"
-                    }`}
+                    className={`min-w-0 break-words ${task.completed
+                      ? "line-through text-gray-500"
+                      : "text-black"
+                      }`}
                   >
                     • {task.title}
                   </span>
