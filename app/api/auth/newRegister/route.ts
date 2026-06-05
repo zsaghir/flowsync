@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { db } from "@/server/db";
 import { signToken } from "@/server/auth";
@@ -21,11 +20,15 @@ export async function POST(req: Request) {
         .digest('base64');
 
 
-    const user = { id: randomUUID(), username, passwordHash, salt, wrappedDataKey, nonce };
-    db.createUser(user);
 
-    return NextResponse.json({
-        token: signToken(user.id),
-        user: { id: user.id, username: user.username },
-    });
+    const createUser = db.createUser(randomUUID(), username, passwordHash, wrappedDataKey, salt, nonce);
+
+
+    if (createUser.ok) {
+        return NextResponse.json({
+            token: signToken(createUser.value.id),
+            user: { id: createUser.value.id, username: createUser.value.username }
+        })
+    };
 }
+

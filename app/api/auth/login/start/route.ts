@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ salt: user.salt });
     } catch {
-        return NextResponse.json({ error: "Servver Error" }, { status: 500 })
+        throw Error
     }
 }
 

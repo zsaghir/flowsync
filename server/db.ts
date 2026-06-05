@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { DatabaseSync } from 'node:sqlite';
+import { error } from "console";
 
 //process.env.NODE_ENV === "development" ? "db.dev.json" : "db.json";
 
@@ -86,12 +87,13 @@ export type TimerState = {
 
 const database = new DatabaseSync(DB_PATH)
 
+database.exec('PRAGMA foreign_keys = on')
 database.exec(`CREATE TABLE IF NOT EXISTS users(
-    id text PRIMARY KEY, 
-      username text);
+    username text UNIQUE,
+    id text PRIMARY KEY);
       
   CREATE TABLE IF NOT EXISTS user_credentials(
-    user_id INTEGER PRIMARY KEY,
+    user_id text PRIMARY KEY,
     passwordHash text,
     wrappedDataKey text,
     salt text,
@@ -114,3 +116,50 @@ database.exec(`CREATE TABLE IF NOT EXISTS users(
       last_saved integer
 
   )`)
+const sqlStatements = {
+  getUser: database.prepare(`SELECT * FROM users u join user_credentials c on u.id = c.user_id WHERE u.username = ? `),
+  createUserId: database.prepare(`INSERT INTO users(username, id) values(?,?)`),
+  createUserCred: database.prepare(`INSERT INTO user_credentials(user_id, passwordHash, wrappedDataKey, salt, nonce) values(?,?,?,?,?)`)
+
+}
+
+export const db = {
+  getUser: (username: string) => {
+
+    const userDetails = sqlStatements.getUser.get(username) as UserCredientials & { username: string } | undefined
+
+    return userDetails ? userDetails : null
+  },
+
+  createUser: (id: string,
+    username: string,
+    passwordHash: string,
+    wrappedDataKey: string,
+    salt: string,
+    nonce: string): { ok: true, value: User } | { ok: false, error: String } => {
+    try {
+
+      database.exec(`BEGIN TRANSACTION`)
+      sqlStatements.createUserId.run(username, id);
+
+      sqlStatements.createUserCred.run(id, passwordHash, wrappedDataKey, salt, nonce)
+      database.prepare(`COMMIT`).run()
+
+
+      return { ok: true, value: { id, username } }
+    } catch (error: any) {
+      database.exec('ROLLBACK')
+      if (error.errcode === 1555 || error.errcode === 2067) {
+
+        return { ok: false, error: "username taken" }
+      }
+      else {
+        throw error
+      }
+
+
+    }
+
+  },
+}
+
