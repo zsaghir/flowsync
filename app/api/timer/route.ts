@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
-import { db } from "@/server/db";
-import { getAuthUserId } from "@/server/auth";
+import { db } from "@/lib/db";
+import { getAuthUserId } from "@/lib/auth";
 
 export async function GET(req: Request) {
   const userId = getAuthUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.json(db.getTimer(userId));
+  const TimerState = db.getTimer(userId)
+  if (TimerState) {
+    return NextResponse.json(TimerState)
+  }
+  return NextResponse.json({})
 }
 
 export async function PUT(req: Request) {
   const userId = getAuthUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { mode, seconds, isRunning, lastSaved } = await req.json();
-  db.saveTimer({ userId, mode, seconds, isRunning, lastSaved });
+  const { mode, seconds, isRunning, lastSaved } = await req.json() as { mode: "pomodoro" | "break" | "stopwatch", seconds: number, isRunning: number, lastSaved: number }
+  db.saveTimer({ mode, seconds, isRunning, lastSaved }, userId);
   return NextResponse.json({ ok: true });
 }

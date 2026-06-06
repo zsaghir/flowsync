@@ -45,6 +45,7 @@ function Timer() {
   const swElapsedRef = useRef(0); //we are using ref to make calculation without resetting
   const swRunningRef = useRef(false);
 
+
   // ── audio ─────────────────────────────────────────────────────────────────
   const audioRef = useRef<HTMLAudioElement>(null);
   const bellRef = useRef<HTMLAudioElement>(null);
@@ -374,12 +375,6 @@ function Timer() {
 
         {/* Mode tabs */}
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-2 w-full">
-          <TabSlot forMode="break">
-            <Break onClick={() => switchToMode("break", settingsInfo.breakTime * 60)} />
-          </TabSlot>
-          <TabSlot forMode="pomodoro">
-            <Pomodoro onClick={() => switchToMode("pomodoro", settingsInfo.pomodoroTime * 60)} />
-          </TabSlot>
           <TabSlot forMode="stopwatch">
             <Button bg="#D6DAC8" textColor="#30210b" borderColor="#30210b" shadow="#30210b"
               className="transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
@@ -387,6 +382,13 @@ function Timer() {
               STOPWATCH
             </Button>
           </TabSlot>
+          <TabSlot forMode="break">
+            <Break onClick={() => switchToMode("break", settingsInfo.breakTime * 60)} />
+          </TabSlot>
+          <TabSlot forMode="pomodoro">
+            <Pomodoro onClick={() => switchToMode("pomodoro", settingsInfo.pomodoroTime * 60)} />
+          </TabSlot>
+
           <PixelHourglass mode={mode} state={hourglassState} totalDurationSeconds={countdownTotalSeconds} />
         </div>
 
