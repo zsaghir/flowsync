@@ -3,7 +3,9 @@
 
 body {
   margin: 0;
-  height: 100vh;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: hidden;
  
 
     background: radial-gradient(
@@ -78,8 +80,8 @@ body {
   }
 
   .bunny-mascot-wrap {
-    right: -0.75rem;
-    bottom: -1.35rem;
+    right: 0.25rem;
+    bottom: -1.2rem;
     width: 64px;
   }
 
@@ -102,4 +104,3 @@ body {
     animation: none !important;
   }
 }
-

@@ -4,6 +4,7 @@ import { SettingsContext } from "./components/Contexts";
 import Tasks from "./components/Tasks";
 import UserProfile from "./components/UserProfile";
 import Setting from "./components/Setting";
+import BoomBox from "./components/BoomBox";
 import UserTasks from "./components/UserTasks";
 import { useAuth } from "@/app/components/Contexts";
 import Timer from "./components/Timer";
@@ -11,7 +12,9 @@ import Timer from "./components/Timer";
 export default function Page() {
   const [pomodoroTime, setPomodoroTime] = useState(25);
   const [breakTime, setBreakTime] = useState(5);
-  const [music, setMusic] = useState("None");
+  const [workMusic, setWorkMusic] = useState("None");
+  const [breakMusic, setBreakMusic] = useState("None");
+  const [volume, setVolume] = useState(0.6);
   const { user, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
 
@@ -24,20 +27,30 @@ export default function Page() {
         setPomodoroTime,
         breakTime,
         setBreakTime,
-        music,
-        setMusic,
+        workMusic,
+        setWorkMusic,
+        breakMusic,
+        setBreakMusic,
+        volume,
+        setVolume,
       }}
     >
       {/* Navbar */}
-      <header className="w-full px-6 py-4 flex items-center justify-end bg-[#D6DAC8] backdrop-blur-md sticky top-0 z-50">
-        <div className="flex gap-4 items-center">
+      <header className="w-full px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-[#D6DAC8] sticky top-0 z-50">
+        <img
+          src="/flowsync-hourglass.svg"
+          alt="FlowSync"
+          className="h-6 sm:h-10 w-auto max-w-[120px] sm:max-w-[160px] shrink-0"
+        />
+        <div className="flex gap-2 sm:gap-4 items-center">
           <UserProfile />
+          <BoomBox />
           <Setting />
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] py-10 gap-10">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100svh-64px)] w-full px-3 sm:px-6 py-6 sm:py-10 gap-6 sm:gap-10 overflow-x-hidden">
         <Timer />
         {mounted && !loading ? (user ? <UserTasks /> : <Tasks />) : <Tasks />}
       </div>

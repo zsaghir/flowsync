@@ -8,19 +8,47 @@ import {
 type Task = { id: string; title: string; completed: boolean };
 
 const UserTasks = () => {
-  const { token } = useAuth();
-  const [taskList, setTaskList]   = useState<Task[]>([]);
+  const { token, clearAuth } = useAuth();
+  const [taskList, setTaskList] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState("");
   const announcedCompleteRef = useRef(false);
-
-  const authHeader = { Authorization: `Bearer ${token}` };
+  const undoneTaskCount = taskList.filter((task) => !
+    task.completed).length;
+  const sortedTasks = [...taskList].sort(
+    (a, b) => Number(a.completed) - Number(b.completed)
+  );
+  const authHeader: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setTaskList([]);
+      return;
+    }
+
+    let cancelled = false;
+
     fetch("/api/tasks", { headers: authHeader })
-      .then((r) => r.json())
-      .then(setTaskList)
-      .catch(() => {});
+      .then(async (r) => {
+        const data = await r.json();
+        if (r.status === 401) {
+          clearAuth();
+          return [];
+        }
+        if (!r.ok || !Array.isArray(data)) return [];
+        return data;
+      })
+      .then((tasks) => {
+        if (!cancelled) setTaskList(tasks);
+      })
+      .catch(() => {
+        if (!cancelled) setTaskList([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -41,39 +69,45 @@ const UserTasks = () => {
     const tempId = `tmp-${Date.now()}`;
     setTaskList((p) => [...p, { id: tempId, title, completed: false }]);
     try {
-      const res  = await fetch("/api/tasks", {
-        method:  "POST",
+      const res = await fetch("/api/tasks", {
+        method: "POST",
         headers: { "Content-Type": "application/json", ...authHeader },
-        body:    JSON.stringify({ title }),
+        body: JSON.stringify({ title }),
       });
       const saved = await res.json();
+      if (!res.ok || !saved?.id) {
+        setTaskList((p) => p.filter((t) => t.id !== tempId));
+        return;
+      }
       setTaskList((p) => p.map((t) => (t.id === tempId ? saved : t)));
-    } catch {}
+    } catch {
+      setTaskList((p) => p.filter((t) => t.id !== tempId));
+    }
   };
 
   const toggleTask = async (id: string, completed: boolean) => {
     setTaskList((p) => p.map((t) => (t.id === id ? { ...t, completed } : t)));
     try {
       await fetch(`/api/tasks/${id}`, {
-        method:  "PATCH",
+        method: "PATCH",
         headers: { "Content-Type": "application/json", ...authHeader },
-        body:    JSON.stringify({ completed }),
+        body: JSON.stringify({ completed }),
       });
-    } catch {}
+    } catch { }
   };
 
   const deleteTask = async (id: string) => {
     setTaskList((p) => p.filter((t) => t.id !== id));
     try {
       await fetch(`/api/tasks/${id}`, { method: "DELETE", headers: authHeader });
-    } catch {}
+    } catch { }
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center w-full px-1">
+      <div className="flex flex-wrap justify-center items-center gap-2 w-full max-w-[min(92vw,520px)]">
         <Input bg="white" textColor="black" borderColor="black" placeholder="Enter a task..."
-          value={taskInput} onChange={(e) => setTaskInput(e.target.value)} />
+          value={taskInput} onChange={(e) => setTaskInput(e.target.value)} className="w-full sm:w-auto" />
 
         <Button bg="#D6DAC8" textColor="#30210b" borderColor="#30210b" shadow="#30210b"
           className="transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
@@ -82,14 +116,14 @@ const UserTasks = () => {
         </Button>
 
         <DropdownMenu bg="#D6DAC8" textColor="black" borderColor="black" shadowColor="#30210b">
-          <DropdownMenuTrigger>Tasks ({taskList.length})</DropdownMenuTrigger>
-          <DropdownMenuContent className="w-72 p-2 space-y-2">
+          <DropdownMenuTrigger>Tasks ({undoneTaskCount})</DropdownMenuTrigger>
+          <DropdownMenuContent className="w-[min(18rem,88vw)] p-2 space-y-2 max-sm:!fixed max-sm:!left-1/2 max-sm:!top-1/2 max-sm:!-translate-x-1/2 max-sm:!-translate-y-1/2 max-sm:!z-50">
             {taskList.length === 0 ? (
               <p className="text-sm italic text-gray-600">No tasks yet</p>
             ) : (
-              taskList.map((task) => (
-                <div key={task.id} className="flex justify-between items-center bg-white/40 rounded px-2 py-1">
-                  <span className={task.completed ? "line-through text-gray-500" : "text-black"}>
+              sortedTasks.map((task) => (
+                <div key={task.id} className="flex justify-between items-center gap-2 bg-white/40 rounded px-2 py-1">
+                  <span className={`${task.completed ? "line-through text-gray-500" : "text-black"} min-w-0 break-words`}>
                     • {task.title}
                   </span>
                   <div className="flex gap-2">

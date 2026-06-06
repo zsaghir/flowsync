@@ -36,11 +36,11 @@ export default function Stopwatch({ elapsed, running, onStart, onStop, onReset, 
 
   return (
     <div className="flex flex-col items-center">
-      <p className="text-9xl font-extrabold my-4 tracking-widest">
+      <p className="text-[clamp(3.25rem,18vw,8rem)] sm:text-9xl font-extrabold my-4 tracking-normal sm:tracking-widest leading-none">
         {formatElapsed(elapsed)}
       </p>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap justify-center gap-3">
         {!running ? (
           <Button bg="#D6A99D" textColor="#30210b" borderColor="#30210b" shadow="#30210b"
             className="transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
@@ -64,7 +64,7 @@ export default function Stopwatch({ elapsed, running, onStart, onStop, onReset, 
       </div>
 
       {breakMinutes !== null && (
-        <div className="mt-6 flex flex-col items-center gap-3">
+        <div className="mt-6 flex flex-col items-center gap-3 px-2 text-center">
           <p className="text-sm font-semibold text-[#30210b]">
             Worked {workedMin > 0 ? `${workedMin}m ` : ""}
             {workedSec > 0 || workedMin === 0 ? `${workedSec}s` : ""} — {breakMinutes}m break earned

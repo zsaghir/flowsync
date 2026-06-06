@@ -6,8 +6,8 @@ import type { Metadata } from "next";
 import { AuthProvider } from "@/app/components/Contexts";
 
 export const metadata: Metadata = {
-  title: "Pomodoro App",
-  description: "Productivity Pomodoro App",
+  title: "Flowsync",
+  description: "Simple Pomodoro with bunny!!",
 };
 
 export default function RootLayout({
