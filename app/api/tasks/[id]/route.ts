@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { getAuthUserId } from "@/server/auth";
 
+let taskChanges = {} as { title: String | null, completed: number | null }
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -11,9 +12,14 @@ export async function PATCH(
 
   const { id } = await params;
   const patch = await req.json();
-  const task = db.updateTask(id, userId, patch);
-  if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(task);
+  console.log(patch.completed)
+  if ("title" in patch && typeof patch.title === 'string') taskChanges.title = patch.title
+  if ("completed" in patch && typeof patch.completed === 'boolean') taskChanges.completed = Number(patch.completed)
+  console.log("Patch: ", patch, " taskChanges ", taskChanges)
+
+  const update = db.updateTask(taskChanges, id, userId);
+  if (update.changes = 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return new NextResponse(null, { status: 204 });
 }
 
 export async function DELETE(

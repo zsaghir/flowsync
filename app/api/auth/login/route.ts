@@ -7,8 +7,10 @@ import crypto from "crypto";
 export async function POST(req: Request) {
   try {
     const { username, authKey } = await req.json();
-
-    const user = db.getUser(username);
+    const hashedUsername = crypto.createHash('sha256')
+      .update(username)
+      .digest('base64')
+    const user = db.getUser(hashedUsername);
     if (!user) {
       return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
 

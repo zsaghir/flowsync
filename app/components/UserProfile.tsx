@@ -86,7 +86,7 @@ const UserProfile = () => {
 
         const wrappedDataKey = sodium.crypto_secretbox_easy(dataKey, nonce, encryptionKey)
 
-        res = await fetch("/api/auth/newRegister", {
+        res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(

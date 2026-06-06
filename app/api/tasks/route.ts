@@ -16,6 +16,6 @@ export async function POST(req: Request) {
   const { title } = await req.json();
   if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
 
-  const task = db.createTask({ id: randomUUID(), title: title.trim(), completed: false, userId });
-  return NextResponse.json(task, { status: 201 });
+  const update = db.createTask({ id: randomUUID(), title: title.trim(), completed: false, userId });
+  if (update.result.changes) { return NextResponse.json(update.task, { status: 201 }) } else throw Error
 }
