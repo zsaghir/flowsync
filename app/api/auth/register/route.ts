@@ -1,24 +1,32 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
-import { db } from "@/server/db";
-import { signToken } from "@/server/auth";
+import { db } from "@/lib/db";
+import { signToken, usernameIntoBase64, passwordIntoBase64 } from "@/lib/auth";
+
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+    const { username, authKey, salt, wrappedDataKey, nonce } = await req.json();
 
-  if (!email || !password)
-    return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+    if (!username || !authKey || !salt || !wrappedDataKey || !nonce)
+        return NextResponse.json({ error: "username and password required" }, { status: 400 });
 
-  if (db.getUser(email))
-    return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+    const hashedUsername = usernameIntoBase64(username)
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = { id: randomUUID(), email, passwordHash };
-  db.createUser(user);
 
-  return NextResponse.json({
-    token: signToken(user.id),
-    user: { id: user.id, email: user.email },
-  });
+
+    const passwordHash = passwordIntoBase64(authKey)
+
+
+    const createUser = db.createUser(randomUUID(), hashedUsername, passwordHash, wrappedDataKey, salt, nonce);
+
+
+    if (createUser.ok) {
+        return NextResponse.json({
+            token: signToken(createUser.value.id),
+            user: { id: createUser.value.id, username: createUser.value.username }
+        })
+    } else {
+        return NextResponse.json({ error: "username already registered" }, { status: 409 });
+    }
 }
+
