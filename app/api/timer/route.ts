@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { db } from "@/server/db";
-import { getAuthUserId } from "@/server/auth";
+import { db } from "@/lib/db";
+import { getAuthUserId } from "@/lib/auth";
 
 export async function GET(req: Request) {
   const userId = getAuthUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const TimerState = db.getTimer(userId)
   if (TimerState) {
-    TimerState.isRunning = TimerState.is_running
-    TimerState.lastSaved = TimerState.last_saved
     return NextResponse.json(TimerState)
   }
   return NextResponse.json({})

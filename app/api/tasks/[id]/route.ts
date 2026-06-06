@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { db } from "@/server/db";
-import { getAuthUserId } from "@/server/auth";
+import { db } from "@/lib/db";
+import { getAuthUserId } from "@/lib/auth";
 
-let taskChanges = {} as { title: String | null, completed: number | null }
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const userId = getAuthUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let taskChanges = {} as { title: string | null, completed: number | null }
 
   const { id } = await params;
   const patch = await req.json();
@@ -17,7 +18,7 @@ export async function PATCH(
   if ("completed" in patch && typeof patch.completed === 'boolean') taskChanges.completed = Number(patch.completed)
 
   const update = db.updateTask(taskChanges, id, userId);
-  if (update.changes = 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!update.changes) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return new NextResponse(null, { status: 204 });
 }
 

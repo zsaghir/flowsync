@@ -1,35 +1,24 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { db } from "@/server/db";
-import { signToken } from "@/server/auth";
-import crypto from "crypto";
+import { db } from "@/lib/db";
+import { signToken, passwordIntoBase64, verifyPassword, usernameIntoBase64 } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  try {
-    const { username, authKey } = await req.json();
-    const hashedUsername = crypto.createHash('sha256')
-      .update(username)
-      .digest('base64')
-    const user = db.getUser(hashedUsername);
-    if (!user) {
-      return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
 
-    }
-    const candidate = crypto.createHash('sha256')
-      .update(authKey).digest('base64');
+  const { username, authKey } = await req.json();
+  const hashedUsername = usernameIntoBase64(username)
+  const user = db.getUser(hashedUsername);
+  if (!user) {
+    return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
 
-    const a = Buffer.from(candidate, "utf8");
-    const b = Buffer.from(user.passwordHash, "utf8");
-    const valid = a.length === b.length && crypto.timingSafeEqual(a, b); //This makes sure the time to compare is same
-
-    if (!valid)
-      return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
-
-    return NextResponse.json({
-      token: signToken(user.id),
-      user: { id: user.id, username: user.username },
-    });
-  } catch {
-    return NextResponse.json({ error: "Servver Error" }, { status: 500 })
   }
+  const valid = verifyPassword(authKey, user.passwordHash)
+
+  if (!valid)
+    return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
+
+  return NextResponse.json({
+    token: signToken(user.id),
+    user: { id: user.id, username: user.username },
+  });
+
 }

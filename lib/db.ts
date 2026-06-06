@@ -1,8 +1,9 @@
 import { sqlStatements, database } from "./SQLite";
 
 export type User = { id: string; username: string; };
-export type UserCredientials = { id: string; passwordHash: string, wrappedDataKey: string, salt: String, nonce: String };
+export type UserCredientials = { id: string; passwordHash: string, wrappedDataKey: string, salt: string, nonce: string };
 export type Task = { id: string; userId: string; title: string; completed: boolean; };
+type TaskRow = { id: string, userId: string, title: string, completed: number }
 export type TimerState = {
   mode: "pomodoro" | "break" | "stopwatch";
   seconds: number;   // remaining for countdown; elapsed for stopwatch
@@ -10,7 +11,8 @@ export type TimerState = {
   lastSaved: number;   // Date.now() ms — used to recalculate on resume
 };
 
-export interface TaskChange { title: String | null, completed: number | null }
+export interface TaskChange { title: string | null, completed: number | null }
+const updateTaskAllowedKeys = new Set(['title', 'completed'])
 
 export const db = {
   getUser: (username: string) => {
@@ -20,12 +22,19 @@ export const db = {
     return userDetails ? userDetails : null
   },
 
+  getUserSalt: (username: string) => {
+
+    const userDetails = sqlStatements.getUserSalt.get(username) as { salt: string }
+
+    return userDetails ? userDetails : null
+  },
+
   createUser: (id: string,
     username: string,
     passwordHash: string,
     wrappedDataKey: string,
     salt: string,
-    nonce: string): { ok: true, value: User } | { ok: false, error: String } => {
+    nonce: string): { ok: true, value: User } | { ok: false, error: string } => {
     try {
 
       database.exec(`BEGIN TRANSACTION`)
@@ -49,31 +58,37 @@ export const db = {
 
   },
 
+
+
   getTasks: (id: string) => {
-    const tasks = sqlStatements.getTasks.all(id) as unknown as Task[]
-    return tasks
+    const tasks = sqlStatements.getTasks.
+      all(id) as TaskRow[] | null;
+    return tasks?.map(r => ({ ...r, completed: Boolean(r.completed) })) as Task[]
 
   },
 
   createTask: (task: Task) => {
-    const result = sqlStatements.createTask.run(task.id, task.userId, task.title, task.completed ? 1 : 0)
+    const result = sqlStatements.createTask.run(task.id, task.userId, task.title,
+      task.completed ? 1 : 0)
     return { result: result, task }
 
   },
-  deleteTask: (id: string, user_id: string) => {
-    return sqlStatements.deleteTask.run(id, user_id)
+  deleteTask: (id: string, userId: string) => {
+    return sqlStatements.deleteTask.run(id, userId)
   },
 
-  getTask: (id: string, user_id: string): Task | undefined => {
-    return sqlStatements.getTask.get(id, user_id) as Task | undefined
+  getTask: (id: string, userId: string): Task | undefined => {
+    const result = sqlStatements.getTask.get(id, userId) as TaskRow | undefined
+    if (result) { return { ...result, completed: Boolean(result.completed) } } else { throw Error("task not found") }
   },
 
-  updateTask: (taskChanges: Partial<TaskChange>, id: string, user_id: string) => {
-    const keys = Object.keys(taskChanges) as (keyof TaskChange)[]
-    if (keys.length == 0) { throw Error }
+  updateTask: (taskChanges: Partial<TaskChange>, id: string, userId: string) => {
+
+    const keys = Object.keys(taskChanges).filter(key => updateTaskAllowedKeys.has(key)) as (keyof TaskChange)[]
+    if (keys.length == 0) { throw Error("Key Length is 0") }
     const columns = keys.map(column => `${column} = ?`).join(", ")
     const values: any[] = keys.map(column => taskChanges[column])
-    return sqlStatements.updateTask(columns).run(...values, id, user_id)
+    return sqlStatements.updateTask(columns).run(...values, id, userId)
   },
   getTimer: (id: string) => {
     const result = sqlStatements.getTimer.get(id)
