@@ -75,7 +75,6 @@ const UserProfile = () => {
           })
 
         })
-        console.log(res)
 
       }
       else {

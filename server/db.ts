@@ -51,7 +51,6 @@ export const db = {
 
   getTasks: (id: string) => {
     const tasks = sqlStatements.getTasks.all(id) as unknown as Task[]
-    console.log("Your task is: ", tasks)
     return tasks
 
   },
@@ -82,7 +81,6 @@ export const db = {
   },
 
   saveTimer: (state: TimerState, id: string) => {
-    console.log
     return sqlStatements.saveTimer.run(state.mode, state.seconds, Number(state.isRunning), state.lastSaved, id)
   }
 }

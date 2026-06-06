@@ -10,12 +10,10 @@ export async function POST(req: Request) {
     if (!username || !authKey || !salt || !wrappedDataKey)
         return NextResponse.json({ error: "username and password required" }, { status: 400 });
 
-    console.log("They auth key is ", authKey, " type: ", typeof (authKey));
-    console.log("The data Key is ", wrappedDataKey)
     const hashedUsername = crypto.createHash('sha256')
         .update(username)
         .digest('base64')
-    console.log("The salt is ", salt)
+
     if (db.getUser(hashedUsername))
         return NextResponse.json({ error: "username already registered" }, { status: 409 });
 
