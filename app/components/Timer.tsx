@@ -524,7 +524,7 @@ function BunnyMascot({ src, message }: { src: string; message: string }) {
       <div className={`bunny-speech-bubble ${message ? "show" : ""}`}>
         {message}
       </div>
-      <img className="bunny-mascot" src={src} alt="" draggable="false" />
+      <img className="bunny-mascot" src={src} alt="" draggable="false" decoding="sync" />
     </div>
   );
 }
