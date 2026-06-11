@@ -6,6 +6,7 @@ import Pomodoro from "./Pomodoro";
 import Stopwatch from "./Stopwatch";
 import { SettingsContext, useAuth } from "./Contexts";
 import { Card, Button } from "pixel-retroui";
+import { dataApi, fetchRefresh } from "@/lib/client/api";
 
 type Mode = "pomodoro" | "break" | "stopwatch";
 
@@ -19,7 +20,7 @@ const START_MESSAGES = [
 
 function Timer() {
   const settingsInfo = useContext(SettingsContext)!;
-  const { user, token } = useAuth();
+
 
   // References of all the start times
   const startRef = useRef(0);
@@ -51,6 +52,7 @@ function Timer() {
   const bellRef = useRef<HTMLAudioElement>(null);
 
   // ── refs that always hold latest user/token (no stale closures) ───────────
+  const { user, token } = useAuth();
   const userRef = useRef(user);
   const tokenRef = useRef(token);
   userRef.current = user;

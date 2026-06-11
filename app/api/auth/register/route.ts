@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
-import { signToken, usernameIntoBase64, passwordIntoBase64 } from "@/lib/auth";
+import { authDb } from "@/lib/server/db";
+import { usernameIntoBase64, passwordIntoBase64, generateFamily } from "@/lib/server/auth";
+
 
 
 export async function POST(req: Request) {
@@ -17,16 +18,27 @@ export async function POST(req: Request) {
     const passwordHash = passwordIntoBase64(authKey)
 
 
-    const createUser = db.createUser(randomUUID(), hashedUsername, passwordHash, wrappedDataKey, salt, nonce);
+    const createUser = authDb.createUser(randomUUID(), hashedUsername, passwordHash, wrappedDataKey, salt, nonce);
+
+    if (!createUser.ok) return NextResponse.json({ error: "username already taken" }, { status: 409 });
+
+    const { accessToken, refreshToken } = generateFamily(createUser.id)
+    const res = NextResponse.json({
+        accessToken,
+        user: { id: createUser.id, username: username.trim().toLowerCase() }
+    })
+
+    res.cookies.set("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false, //only during testing: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/api/auth"
+    });
 
 
-    if (createUser.ok) {
-        return NextResponse.json({
-            token: signToken(createUser.value.id),
-            user: { id: createUser.value.id, username: createUser.value.username }
-        })
-    } else {
-        return NextResponse.json({ error: "username already registered" }, { status: 409 });
-    }
+    return res
+
+
 }
 

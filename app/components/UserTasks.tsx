@@ -33,7 +33,7 @@ const UserTasks = () => {
       .then(async (r) => {
         const data = await r.json();
         if (r.status === 401) {
-          clearAuth();
+          //clearAuth();
           return [];
         }
         if (!r.ok || !Array.isArray(data)) return [];

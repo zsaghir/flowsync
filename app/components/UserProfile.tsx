@@ -1,15 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/app/components/Contexts";
+import { useAuth, AuthUser } from "@/app/components/Contexts";
 import { Button, Popup } from "pixel-retroui";
-import sodium from 'libsodium-wrappers-sumo'
+
+import { dataApi, sodium } from "@/lib/client/api";
 
 const inputClass =
   "w-full p-2 border border-black rounded text-black text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#9CAFAA]";
 
 type SaltResponse = {
   salt: string
+}
+
+type LoginFetch = {
+  accessToken: string,
+  refreshToken: string,
+  user: AuthUser
 }
 
 function encryptPassword(password: string, salt: Uint8Array): [Uint8Array, Uint8Array] {
@@ -99,9 +106,14 @@ const UserProfile = () => {
         });
 
       }
-      const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Something went wrong"); return; }
-      setAuth(data.user, data.token);
+
+      if (!res.ok) {
+        const data = await res.json() as { error: string }
+        setError(data.error ?? "Something went wrong"); return;
+      }
+      const data = await res.json() as LoginFetch
+
+      setAuth(data.user, data.accessToken);
       reset();
       setIsOpen(false);
     } catch {
