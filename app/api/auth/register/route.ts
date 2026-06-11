@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     if (createUser.ok) {
         return NextResponse.json({
             token: signToken(createUser.value.id),
-            user: { id: createUser.value.id, username: createUser.value.username }
+            user: { id: createUser.value.id, username: username.trim().toLowerCase() }
         })
     } else {
         return NextResponse.json({ error: "username already registered" }, { status: 409 });

@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     token: signToken(user.id),
-    user: { id: user.id, username: user.username },
+    user: { id: user.id, username: username.trim().toLowerCase() },
   });
 
 }
