@@ -6,9 +6,18 @@ import Pomodoro from "./Pomodoro";
 import Stopwatch from "./Stopwatch";
 import { SettingsContext, useAuth } from "./Contexts";
 import { Card, Button } from "pixel-retroui";
-import { dataApi, fetchRefresh } from "@/lib/client/api";
+import { dataApi } from "@/lib/client/api";
+import z from "zod"
 
 type Mode = "pomodoro" | "break" | "stopwatch";
+
+const TimerSchema = z.object({
+  mode: z.enum(["pomodoro", "break", "stopwatch"]),
+  isRunning: z.union([z.literal(0), z.literal(1)]),
+  seconds: z.number(),
+  lastSaved: z.number()
+
+})
 
 const START_MESSAGES = [
   "You got this!",
@@ -52,11 +61,13 @@ function Timer() {
   const bellRef = useRef<HTMLAudioElement>(null);
 
   // ── refs that always hold latest user/token (no stale closures) ───────────
-  const { user, token } = useAuth();
+  const { user, accessToken, dataKey } = useAuth();
   const userRef = useRef(user);
-  const tokenRef = useRef(token);
+  const tokenRef = useRef(accessToken);
+  const dataKeyRef = useRef(dataKey)
+  dataKeyRef.current = dataKey
   userRef.current = user;
-  tokenRef.current = token;
+  tokenRef.current = accessToken;
 
   // ── is any timer actively running right now? ──────────────────────────────
   const isRunning = mode === "stopwatch" ? swRunning : !isPaused;
@@ -141,17 +152,21 @@ function Timer() {
 
   // ── persist timer state to server (fire-and-forget) ──────────────────────
   function save() {
-    if (!userRef.current || !tokenRef.current) return;
-    fetch("/api/timer", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenRef.current}` },
-      body: JSON.stringify({
-        mode: modeRef.current,
-        seconds: modeRef.current === "stopwatch" ? swElapsedRef.current : secondsRef.current,
-        isRunning: modeRef.current === "stopwatch" ? swRunningRef.current : !isPausedRef.current,
-        lastSaved: Date.now(),
-      }),
-    }).catch(() => { });
+    if (!userRef.current || !tokenRef.current || !dataKeyRef.current) {
+      console.log("Not able to save causd of a missing variable")
+      return
+    };
+    dataApi.sendData(dataKeyRef.current, tokenRef.current, "/api/user_data",
+      {
+        body: JSON.stringify(TimerSchema.parse({
+          mode: modeRef.current,
+          seconds: modeRef.current === "stopwatch" ? swElapsedRef.current : secondsRef.current,
+          isRunning: modeRef.current === "stopwatch" ? Number(swRunningRef.current) : Number(!isPausedRef.current),
+          lastSaved: Date.now()
+        })),
+        method: "PUT"
+      }).catch((error) => { console.log(error) });
+
   }
 
   function resetClockRefs() {
@@ -179,11 +194,15 @@ function Timer() {
   }
   // ── load saved timer when user logs in ───────────────────────────────────
   useEffect(() => {
-    if (!user || !token) return;
+    if (!user || !accessToken || !dataKey) {
 
-    fetch("/api/timer", { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((state) => {
+      return;
+    }
+    console.log("The data key is ", dataKey)
+    console.log("Setting up everything")
+    dataApi.fetchData(dataKey, accessToken, "/api/user_data")
+      .then((_state) => {
+        const state = TimerSchema.parse(_state)
         if (!state?.mode) return;
 
         const driftSec = (Date.now() - state.lastSaved) / 1000;
@@ -198,8 +217,8 @@ function Timer() {
           ));
           swElapsedRef.current = adj;
           setSwElapsed(adj);
-          swRunningRef.current = state.isRunning;
-          setSwRunning(state.isRunning);
+          swRunningRef.current = Boolean(state.isRunning);
+          setSwRunning(swRunningRef.current);
           if (adj > 0 || state.isRunning) {
             startRef.current = Date.now() - adj * 1000;
             pauseRef.current = state.isRunning ? 0 : Date.now();
@@ -238,7 +257,7 @@ function Timer() {
           }
         }
       })
-      .catch(() => { });
+      .catch((error) => { });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── main interval: countdown + stopwatch ticking ─────────────────────────

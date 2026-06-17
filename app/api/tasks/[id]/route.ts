@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { dataDb } from "@/lib/server/db";
 import { getAuthUserId } from "@/lib/server/auth";
+import z from "zod"
 
+const PatchTaskSchema = z.object({
+  data: z.string(),
+  nonce: z.string()
+})
 
 export async function PATCH(
   req: Request,
@@ -12,12 +17,10 @@ export async function PATCH(
 
 
   const { id } = await params;
-  const { data, nonce } = await req.json() as { data: Uint8Array | undefined, nonce: Uint8Array | undefined }
+  const json = PatchTaskSchema.safeParse(await req.json())
+  if (!json.success) return NextResponse.json({ error: "Bad Request" }, { status: 400 });
 
-  if (!data || !nonce || !(data instanceof Uint8Array) || !(data instanceof Uint8Array))
-    return NextResponse.json({ error: "Bad Request" }, { status: 400 });
-
-  const update = dataDb.updateTask({ data, nonce, id, userId });
+  const update = dataDb.updateTask({ id, userId, ...json.data });
   if (!update.changes) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return new NextResponse(null, { status: 204 });
 }

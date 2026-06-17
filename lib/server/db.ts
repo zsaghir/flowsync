@@ -1,31 +1,46 @@
 import { authSql, database, dataSql } from "./SQLite";
-
+import z, { string } from "zod"
 export type User = { id: string; username: string; };
 export type UserCredientials = { id: string; passwordHash: string, wrappedDataKey: string, salt: string, nonce: string };
-export type Task = { id: string, userId: string, data: Uint8Array, nonce: Uint8Array };
+export type Task = z.infer<typeof TaskSchema>
+export type NewTask = z.infer<typeof CreateTaskSchema>
+export type DataCipher = z.infer<typeof DataCipherSchema>
+export type UserData = z.infer<typeof UserDataSchema>
 
-// export type TimerState = {
+export const TaskSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  data: z.string(),
+  nonce: z.string()
 
-//   mode: "pomodoro" | "break" | "stopwatch";
-//   seconds: number;   // remaining for countdown; elapsed for stopwatch
-//   isRunning: number;
-//   lastSaved: number;   // Date.now() ms — used to recalculate on resume
-// };
+})
 
-export interface TaskChange { title: string | null, completed: number | null }
+export const CreateTaskSchema = z.object({
+  data: z.string(),
+  nonce: z.string()
 
+})
+
+export const DataCipherSchema = z.object({
+  data: z.string(),
+  nonce: z.string()
+})
+
+export const UserDataSchema = DataCipherSchema.extend({ userId: z.string() })
 
 export const authDb = {
   getUser: (username: string) => {
 
-    const userDetails = authSql.getUser.get(username) as UserCredientials | undefined
+    const userDetails = authSql.getUser.get(username)
 
-    return userDetails ? userDetails : null
+
+    return userDetails
   },
 
   getUserSalt: (username: string) => {
 
-    const userDetails = authSql.getUserSalt.get(username) as { salt: string }
+    const userDetails = authSql.getUserSalt.get(username)
+
 
     return userDetails ? userDetails : null
   },
@@ -40,6 +55,8 @@ export const authDb = {
 
       database.exec(`BEGIN TRANSACTION`)
       authSql.createUserId.run(username, id);
+
+
 
       authSql.createUserCred.run(id, passwordHash, wrappedDataKey, salt, nonce)
       database.prepare(`COMMIT`).run()
@@ -63,31 +80,30 @@ export const authDb = {
 export const dataDb = {
 
 
-  getTasks: (id: string) => {
-    const tasks = dataSql.getTasks.
-      all(id) as Task[] | null;
+  getTasks: (userId: string) => {
+    const tasks = dataSql.getTasks.all({ userId })
+
     return tasks
 
   },
 
   createTask: (task: Task) => {
-    const result = dataSql.createTask.run(task.id, task.userId, task.data,
-      task.nonce)
+    const result = dataSql.createTask.run(task)
     return { result: result, task }
 
   },
   deleteTask: (id: string, userId: string) => {
-    return dataSql.deleteTask.run(id, userId)
+    return dataSql.deleteTask.run({ id, userId })
   },
 
-  getTask: (id: string, userId: string): Task | undefined => {
-    const result = dataSql.getTask.get(id, userId) as Task | undefined
+  getTask: (id: string, userId: string) => {
+    const result = dataSql.getTask.get({ id, userId })
     if (result) { return result } else { throw Error("task not found") }
   },
 
   updateTask: (patch: Task) => {
-    const result = dataSql.updateTask.run(patch.data,
-      patch.nonce, patch.id, patch.userId)
+    console.log(patch)
+    const result = dataSql.updateTask.run(patch)
     return result
   },
   getUserData: (id: string) => {
@@ -95,7 +111,7 @@ export const dataDb = {
     return result
   },
 
-  saveUserData: (data: Uint8Array, nonce: Uint8Array, id: string) => {
-    return dataSql.getUserData.run(data, nonce, id)
+  saveUserData: (userData: UserData) => {
+    return dataSql.saveUserData.run(userData)
   }
 }

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useAuth, AuthUser } from "@/app/components/Contexts";
 import { Button, Popup } from "pixel-retroui";
 
-import { dataApi, sodium } from "@/lib/client/api";
+import { dataApi, sodium, userLogin, userSignup } from "@/lib/client/api";
+
 
 const inputClass =
   "w-full p-2 border border-black rounded text-black text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#9CAFAA]";
@@ -13,22 +14,14 @@ type SaltResponse = {
   salt: string
 }
 
-type LoginFetch = {
+type AccountFetch = {
   accessToken: string,
-  refreshToken: string,
+  wrappedDataKey: Uint8Array,
   user: AuthUser
+  nonce: Uint8Array
 }
 
-function encryptPassword(password: string, salt: Uint8Array): [Uint8Array, Uint8Array] {
-  const derived = sodium.crypto_pwhash(
-    64, password, salt,
-    sodium.crypto_pwhash_OPSLIMIT_MODERATE,
-    sodium.crypto_pwhash_MEMLIMIT_MODERATE,
-    sodium.crypto_pwhash_ALG_ARGON2ID13
-  );
-  return [derived.slice(0, 32), derived.slice(32, 64)]
 
-}
 const UserProfile = () => {
   const { user, setAuth, clearAuth } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -53,71 +46,25 @@ const UserProfile = () => {
 
     setBusy(true);
     try {
-      //first fetch the salt
-      let res: Response
-      if (mode === "login") {
-        const saltFetch = await fetch("/api/auth/login/start", {
-          method: "Post",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username
+      const res = mode === "login" ? await userLogin(username, password) : await userSignup(username, password)
+      if ("error" in res) {
+        setError(res.error ?? "Something Went wrong")
+        clearAuth(res.error)
+      } else {
+        if (res.user || res.accessToken || res.dataKey) {
 
-          })
-        })
+          setAuth(res.user, res.accessToken, res.dataKey);
 
-        const saltResponse = (await saltFetch.json()) as SaltResponse
-        if (!saltFetch.ok) {
-          const saltError = saltResponse as any
-          setError(saltError.error ?? "Something went wrong");
-          return;
+          reset();
+          setIsOpen(false);
+
         }
-        const salt = sodium.from_base64(saltResponse.salt);
-        const [authKey, encryptionKey] = encryptPassword(password, salt)
-        res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username,
-            authKey: sodium.to_base64(authKey)
-          })
-
-        })
-
-      }
-      else {
-        const salt = sodium.randombytes_buf(sodium.crypto_pwhash_argon2id_SALTBYTES) //Used for encryption password
-        const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-        const dataKey = sodium.randombytes_buf(32);
-        const [authKey, encryptionKey] = encryptPassword(password, salt)
-
-        const wrappedDataKey = sodium.crypto_secretbox_easy(dataKey, nonce, encryptionKey)
-
-        res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            {
-              username
-              , authKey: sodium.to_base64(authKey)
-              , wrappedDataKey: sodium.to_base64(wrappedDataKey)
-              , salt: sodium.to_base64(salt)
-              , nonce: sodium.to_base64(nonce)
-            }),
-        });
-
       }
 
-      if (!res.ok) {
-        const data = await res.json() as { error: string }
-        setError(data.error ?? "Something went wrong"); return;
-      }
-      const data = await res.json() as LoginFetch
-
-      setAuth(data.user, data.accessToken);
-      reset();
-      setIsOpen(false);
-    } catch {
+    } catch (error) {
       setError("Network error");
+      console.log(error)
+      clearAuth(typeof error === "string" ? error : null)
     } finally {
       setBusy(false);
     }

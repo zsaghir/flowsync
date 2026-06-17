@@ -11,6 +11,7 @@ export async function POST(req: Request) {
         if (!user) {
             return NextResponse.json({ error: "Username Does not exist" }, { status: 400 });
         }
+        if (!user?.salt) throw Error("Databaase did not fetch the right information")
         return NextResponse.json({ salt: user.salt });
     } catch (error) {
         throw error

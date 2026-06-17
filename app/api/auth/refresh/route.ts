@@ -5,7 +5,6 @@ import { AppError, ErrorResponses } from "@/lib/server/error";
 
 export async function GET(req: NextRequest) {
     const oldRefreshToken = req.cookies.get("refreshToken")?.value as string | undefined
-    console.log(oldRefreshToken)
     if (!oldRefreshToken || oldRefreshToken && typeof oldRefreshToken != "string") throw ErrorResponses.BadRequest
     try {
         console.log("Starting to do refresh")

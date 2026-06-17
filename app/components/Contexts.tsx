@@ -3,6 +3,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { fetchRefresh } from "@/lib/client/api";
+import { LocalStorageSchema } from "@/lib/client/api";
+//import { openDb } from "idb"; setup for later index db implementation
+
 
 //Settings context
 type SettingsType = {
@@ -31,25 +34,27 @@ export const SettingsContext = createContext<SettingsType>({
   setVolume: () => { },
 });
 
-//
+//User context
 
 export type AuthUser = { id: string; username: string } | null;
 
 export type AuthContextType = {
   user: AuthUser;
-  token: string | null;
+  accessToken: string | null;
+  dataKey: Uint8Array | null
   loading: boolean;
-  setAuth: (user: AuthUser, token: string) => void;
-  clearAuth: () => void;
+  setAuth: (user: AuthUser, token: string, dataKey: Uint8Array) => void;
+  clearAuth: (error?: any | null) => void;
 };
 
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  token: null,
+  accessToken: null,
+  dataKey: null,
   loading: true,
   setAuth: () => { },
-  clearAuth: () => { },
+  clearAuth: (error = null) => { },
 });
 
 
@@ -57,7 +62,8 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [dataKey, setDataKey] = useState<Uint8Array | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,43 +72,54 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const raw = localStorage.getItem("auth");
         if (raw) {
-          let { user, token } = JSON.parse(raw);
-          const payload = jwtDecode(token);
+          const localStorageData = JSON.parse(raw)
+          if (!localStorageData.dataKey) throw Error("Corrupted Storage")
+          localStorageData.dataKey = new Uint8Array(localStorageData.dataKey)
+          let { user, accessToken, dataKey } = LocalStorageSchema.parse(localStorageData)
+
+          const payload = jwtDecode(accessToken);
           if (!payload.exp) throw Error()
           if (payload.exp * 1000 < Date.now()) {
             const tokens = await fetchRefresh()
-            token = tokens.accessToken
-            console.log("We are settting items")
-            localStorage.setItem("auth", JSON.stringify({ user, token }))
+            accessToken = tokens.accessToken
+            localStorage.setItem("auth", JSON.stringify({ user, accessToken, dataKey: Array.from(dataKey) }))
           }
 
-          console.log(`Setting token as ${token}`)
           setUser(user);
-          setToken(token);
+          setAccessToken(accessToken);
+          console.log(`Setting data key as ${JSON.stringify(dataKey)}`)
+          setDataKey(dataKey);
+
           setLoading(false);
         }
-      } catch (error) { console.log("There was an error"); clearAuth() }
+      } catch (error) { console.log("There was an error", error); clearAuth() }
 
     }
     init()
   }, []);
 
 
-  const setAuth = (user: AuthUser, accessToken: string) => {
-    setUser(user);
-    setToken(accessToken);
-    localStorage.setItem("auth", JSON.stringify({ user, token: accessToken }));
+  const setAuth = (user: AuthUser, accessToken: string, dataKey: Uint8Array) => {
+    setLoading(true)
+    const data = LocalStorageSchema.parse({ user, accessToken, dataKey })
+    setUser(data.user);
+    setAccessToken(data.accessToken);
+    setDataKey(data.dataKey)
+    localStorage.setItem("auth", JSON.stringify({ ...data, dataKey: Array.from(data.dataKey) }));
+    setLoading(false)
   };
 
-  const clearAuth = () => {
-    console.log("Clear auth was triggered")
+  const clearAuth = (error = null as null | any) => {
+
+    console.log(error ?? "Clear auth was triggered ")
     setUser(null);
-    setToken(null);
+    setAccessToken(null);
+    setDataKey(null);
     localStorage.removeItem("auth");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, setAuth, clearAuth }}>
+    <AuthContext.Provider value={{ user, accessToken, dataKey, loading, setAuth, clearAuth }}>
       {children}
     </AuthContext.Provider>
   );

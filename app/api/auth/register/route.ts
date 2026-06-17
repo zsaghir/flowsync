@@ -2,17 +2,22 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { authDb } from "@/lib/server/db";
 import { usernameIntoBase64, passwordIntoBase64, generateFamily } from "@/lib/server/auth";
+import z from "zod"
+import { ErrorResponses } from "@/lib/server/error";
 
-
+const RequestType = z.object({
+    username: z.string(), authKey: z.string(), salt: z.string(),
+    wrappedDataKey: z.string(), nonce: z.string()
+})
 
 export async function POST(req: Request) {
-    const { username, authKey, salt, wrappedDataKey, nonce } = await req.json();
 
-    if (!username || !authKey || !salt || !wrappedDataKey || !nonce)
-        return NextResponse.json({ error: "username and password required" }, { status: 400 });
-
+    const _request = RequestType.safeParse(await req.json())
+    if (!_request.success) {
+        return ErrorResponses.BadRequest
+    }
+    const { username, authKey, salt, wrappedDataKey, nonce } = _request.data
     const hashedUsername = usernameIntoBase64(username)
-
 
 
     const passwordHash = passwordIntoBase64(authKey)

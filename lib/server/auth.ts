@@ -2,6 +2,11 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { authSql, database } from "./SQLite.ts";
 import { NotFoundError, ExpiredError, RevokedError } from "./error.ts";
+import z from "zod";
+
+
+const TokenInformationType = z.object({ isRevoked: z.number(), familyId: z.number(), idExp: z.number(), userId: z.string() });
+
 
 if (!process.env.JWT_SECRET) throw Error("Set your server secret key")
 const SECRET = process.env.JWT_SECRET;
@@ -11,11 +16,16 @@ const DeleteFamily = (id: number) => {
 
 
 
-export const verifyToken = (token: string): string | null => {
+export const verifyToken = (token: string) => {
   try {
-    const payload = jwt.verify(token, SECRET) as { sub: string };
+
+    const payload = jwt.verify(token, SECRET);
+    if (!payload.sub || typeof payload.sub !== "string") throw new NotFoundError
+
     return payload.sub;
   } catch (error) {
+    console.log("Verification error is ")
+
     if (error instanceof jwt.TokenExpiredError) {
       throw new ExpiredError
     }
@@ -23,10 +33,17 @@ export const verifyToken = (token: string): string | null => {
   }
 };
 
-export const getAuthUserId = (req: Request): string | null => {
+export const getAuthUserId = (req: Request) => {
   const header = req.headers.get("authorization") ?? "";
+
   if (!header.startsWith("Bearer ")) return null;
-  return verifyToken(header.slice(7));
+  try {
+    return verifyToken(header.slice(7));
+
+  } catch {
+    return null
+
+  }
 };
 
 export const passwordIntoBase64 = (value: any) => crypto.createHash('sha256')
@@ -60,7 +77,7 @@ export const generateFamily = (userId: string) => {
 
     if (!tokenGen.changes) throw Error("Failed to generate token")
     database.exec('COMMIT')
-    const accessToken = jwt.sign({ sub: userId }, SECRET, { expiresIn: "5" });
+    const accessToken = jwt.sign({ sub: userId }, SECRET, { expiresIn: "1m" });
 
     return { refreshToken, accessToken }
 
@@ -75,11 +92,14 @@ export const generateFamily = (userId: string) => {
 export const newRefreshToken = (tokenId: string) => {
 
   const tokenHash = crypto.createHash('sha256').update(tokenId).digest('hex')
-  const tokenInformation = authSql.getToken.
-    get(tokenHash) as { isRevoked: number, familyId: number, familyExp: number, userId: string } | undefined
+  const _tokenInformation = authSql.getToken.
+    get(tokenHash)
 
 
-  if (!tokenInformation) throw new NotFoundError("Token not found")
+  if (!_tokenInformation) throw new NotFoundError("Token not found")
+
+
+  const tokenInformation = TokenInformationType.parse(_tokenInformation)
 
 
   const CurrentDate = Math.floor(Date.now() / 1000)
@@ -90,7 +110,7 @@ export const newRefreshToken = (tokenId: string) => {
   }
 
   //Checking if token expired
-  if (tokenInformation.familyExp < CurrentDate) {
+  if (tokenInformation.idExp < CurrentDate) {
     DeleteFamily(tokenInformation.familyId)
     throw new ExpiredError("Family Expired")
   }
@@ -104,7 +124,7 @@ export const newRefreshToken = (tokenId: string) => {
     const hash = crypto.createHash('sha256').update(refreshToken).digest('hex')
     const tokenGen = authSql.generateToken.run(hash, 0, tokenInformation.familyId)
     if (!tokenGen.changes) throw Error("Couldn't make a new token")
-
+    console.log("Sub is ", tokenInformation.userId)
     const accessToken = jwt.sign({ sub: tokenInformation.userId }, SECRET, { expiresIn: "1m" }); //1m for debugging purpose
 
     database.exec('COMMIT')
