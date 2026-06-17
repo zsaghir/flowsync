@@ -8,7 +8,6 @@ export function GET(req: Request) {
   const userId = getAuthUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  console.log("Trying to get the data")
   const data = dataDb.getUserData(userId)
   if (data) {
     return NextResponse.json(data)

@@ -87,7 +87,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
           setUser(user);
           setAccessToken(accessToken);
-          console.log(`Setting data key as ${JSON.stringify(dataKey)}`)
           setDataKey(dataKey);
 
           setLoading(false);
@@ -111,7 +110,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const clearAuth = (error = null as null | any) => {
 
-    console.log(error ?? "Clear auth was triggered ")
+    console.log(error ?? "Clear auth was triggered ");
+    fetch("/api/auth/logout");
     setUser(null);
     setAccessToken(null);
     setDataKey(null);

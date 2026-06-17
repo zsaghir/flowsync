@@ -7,7 +7,6 @@ export async function GET(req: NextRequest) {
     const oldRefreshToken = req.cookies.get("refreshToken")?.value as string | undefined
     if (!oldRefreshToken || oldRefreshToken && typeof oldRefreshToken != "string") throw ErrorResponses.BadRequest
     try {
-        console.log("Starting to do refresh")
         const data = newRefreshToken(oldRefreshToken)
 
         const res = NextResponse.json({ accessToken: data.accessToken })

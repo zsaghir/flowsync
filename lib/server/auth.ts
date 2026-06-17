@@ -24,7 +24,6 @@ export const verifyToken = (token: string) => {
 
     return payload.sub;
   } catch (error) {
-    console.log("Verification error is ")
 
     if (error instanceof jwt.TokenExpiredError) {
       throw new ExpiredError
@@ -89,6 +88,19 @@ export const generateFamily = (userId: string) => {
 
 }
 
+export const deleteTokenChain = (tokenId: string) => {
+  const tokenHash = crypto.createHash('sha256').update(tokenId).digest('hex')
+  const _tokenInformation = authSql.getToken.
+    get(tokenHash)
+
+  if (!_tokenInformation) throw new NotFoundError("Token not found")
+
+  const tokenInformation = TokenInformationType.parse(_tokenInformation)
+  DeleteFamily(tokenInformation.familyId)
+
+
+}
+
 export const newRefreshToken = (tokenId: string) => {
 
   const tokenHash = crypto.createHash('sha256').update(tokenId).digest('hex')
@@ -124,7 +136,6 @@ export const newRefreshToken = (tokenId: string) => {
     const hash = crypto.createHash('sha256').update(refreshToken).digest('hex')
     const tokenGen = authSql.generateToken.run(hash, 0, tokenInformation.familyId)
     if (!tokenGen.changes) throw Error("Couldn't make a new token")
-    console.log("Sub is ", tokenInformation.userId)
     const accessToken = jwt.sign({ sub: tokenInformation.userId }, SECRET, { expiresIn: "1m" }); //1m for debugging purpose
 
     database.exec('COMMIT')

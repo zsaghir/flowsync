@@ -85,7 +85,6 @@ export const dataApi = {
             const message = sodium.from_string(fetchParameters.body)
 
             const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
-            console.log("Nonce is ", nonce, "message is ", message, "key is ", key)
             const data = sodium.crypto_secretbox_easy(message, nonce, key)
 
             body = JSON.stringify({ data: sodium.to_base64(data), nonce: sodium.to_base64(nonce) })
@@ -137,7 +136,6 @@ export const dataApi = {
 
                 return { ...JSON.parse(message), id: item.id };
             });
-            console.log(messages)
             return messages
 
         }
@@ -206,8 +204,6 @@ export const userLogin = async (username: string, password: string) => {
         const data = LoginFetchSchema.parse(await res.json())
 
         if (!data.wrappedDataKey || !data.nonce) { return { error: "Server Error" } }
-        console.log("The data given is is ", data)
-        console.log("the encryption iey is ", keys.encryptionKey)
 
         const wrappedDataKey = sodium.from_base64(data.wrappedDataKey)
         const nonce = sodium.from_base64(data.nonce)

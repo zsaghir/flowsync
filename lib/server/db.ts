@@ -102,7 +102,7 @@ export const dataDb = {
   },
 
   updateTask: (patch: Task) => {
-    console.log(patch)
+
     const result = dataSql.updateTask.run(patch)
     return result
   },
