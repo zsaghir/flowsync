@@ -5,11 +5,24 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, Input, Button,
 } from "pixel-retroui";
 
-type Task = { id: string; title: string; completed: boolean };
+import { dataApi } from "@/lib/client/api";
+import z from "zod"
+import { TaskSchema, TasksArraySchema } from "@/lib/client/api"
+
+
+type TasksArray = z.infer<typeof TasksArraySchema>
+type Task = z.infer<typeof TaskSchema>
+
+
+const saveTaskSchema = z.object({
+  title: z.string(),
+  completed: z.union([z.number(), z.boolean()])
+
+})
 
 const UserTasks = () => {
-  const { token, clearAuth } = useAuth();
-  const [taskList, setTaskList] = useState<Task[]>([]);
+  const { accessToken, dataKey, clearAuth } = useAuth();
+  const [taskList, setTaskList] = useState<TasksArray>([]);
   const [taskInput, setTaskInput] = useState("");
   const announcedCompleteRef = useRef(false);
   const undoneTaskCount = taskList.filter((task) => !
@@ -17,39 +30,33 @@ const UserTasks = () => {
   const sortedTasks = [...taskList].sort(
     (a, b) => Number(a.completed) - Number(b.completed)
   );
-  const authHeader: Record<string, string> = token
-    ? { Authorization: `Bearer ${token}` }
-    : {};
+
 
   useEffect(() => {
-    if (!token) {
+    if (!accessToken || !dataKey) {
       setTaskList([]);
       return;
     }
 
     let cancelled = false;
 
-    fetch("/api/tasks", { headers: authHeader })
-      .then(async (r) => {
-        const data = await r.json();
-        if (r.status === 401) {
-          clearAuth();
-          return [];
-        }
-        if (!r.ok || !Array.isArray(data)) return [];
-        return data;
-      })
-      .then((tasks) => {
+    dataApi.fetchData(dataKey, accessToken, "/api/tasks/")
+      .then((_tasks) => {
+        const tasks = TasksArraySchema.parse(_tasks)
         if (!cancelled) setTaskList(tasks);
       })
-      .catch(() => {
+      .catch((error) => {
+        clearAuth("Error while fetchign task")
+        console.log(error)
         if (!cancelled) setTaskList([]);
+        throw error
+
       });
 
     return () => {
       cancelled = true;
     };
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const allComplete = taskList.length > 0 && taskList.every((task) => task.completed);
@@ -69,38 +76,53 @@ const UserTasks = () => {
     const tempId = `tmp-${Date.now()}`;
     setTaskList((p) => [...p, { id: tempId, title, completed: false }]);
     try {
-      const res = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({ title }),
-      });
+      if (!dataKey || !accessToken) throw Error("User information corrupted")
+      const res = await dataApi.sendData(dataKey, accessToken, "/api/tasks",
+        {
+          body: JSON.stringify(saveTaskSchema.parse(
+            {
+              title,
+              completed: 0
+            })),
+          method: "POST"
+        }
+      )
       const saved = await res.json();
       if (!res.ok || !saved?.id) {
         setTaskList((p) => p.filter((t) => t.id !== tempId));
         return;
       }
-      setTaskList((p) => p.map((t) => (t.id === tempId ? saved : t)));
-    } catch {
+      setTaskList((p) => p.map((t) => (t.id === tempId ? { ...t, id: saved.id } : t)
+
+      ));
+    } catch (error) {
       setTaskList((p) => p.filter((t) => t.id !== tempId));
+      console.log(error)
     }
   };
 
-  const toggleTask = async (id: string, completed: boolean) => {
+  const toggleTask = async (id: string, completed: boolean, title: string) => {
     setTaskList((p) => p.map((t) => (t.id === id ? { ...t, completed } : t)));
     try {
-      await fetch(`/api/tasks/${id}`, {
+      if (!accessToken || !dataKey) {
+        throw Error("Corrupted User Cache");
+      }
+      await dataApi.sendData(dataKey, accessToken, `/api/tasks/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({ completed }),
+        body: JSON.stringify(saveTaskSchema.parse({
+          title,
+          completed
+        })),
       });
-    } catch { }
+    } catch (error) { clearAuth("Error while updating task"); throw error }
   };
 
   const deleteTask = async (id: string) => {
     setTaskList((p) => p.filter((t) => t.id !== id));
     try {
-      await fetch(`/api/tasks/${id}`, { method: "DELETE", headers: authHeader });
-    } catch { }
+      if (!accessToken || !dataKey) throw new Error("Corrupted user cache")
+      await dataApi.sendData(dataKey, accessToken, `/api/tasks/${id}`, { method: "DELETE", body: null });
+    } catch (error) { clearAuth("Error while deleting task"); throw error }
   };
 
   return (
@@ -127,7 +149,7 @@ const UserTasks = () => {
                     • {task.title}
                   </span>
                   <div className="flex gap-2">
-                    <button onClick={() => toggleTask(task.id, !task.completed)} className="p-1 hover:scale-110 transition">
+                    <button onClick={() => toggleTask(task.id, !Boolean(task.completed), task.title)} className="p-1 hover:scale-110 transition">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                         stroke={task.completed ? "lightgreen" : "gray"}
                         strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
