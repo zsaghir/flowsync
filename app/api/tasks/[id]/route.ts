@@ -34,6 +34,6 @@ export async function DELETE(
 
   const { id } = await params;
   const ok = dataDb.deleteTask(id, userId);
-  if (!ok) return NextResponse.json({ error: "Not found" }, { status: 400 });
+  if (!ok.changes) return NextResponse.json({ error: "Not found" }, { status: 400 });
   return new NextResponse(null, { status: 204 });
 }

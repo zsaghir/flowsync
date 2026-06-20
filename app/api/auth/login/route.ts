@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   res.cookies.set("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: false, //only during testing: true,
+    secure: true,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 30,
     path: "/api/auth"

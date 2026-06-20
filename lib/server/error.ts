@@ -30,15 +30,20 @@ export class RevokedError extends AppError {
     }
 }
 
-export const ErrorResponses = {
-    Unauthorized: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
 
-    NotFound: (element: string) => NextResponse.json({ error: `${element} does not exist` }, { status: 400 }),
-
-    BadRequest: NextResponse.json({ error: "Bad Request" }, { status: 400 }),
-
-    Forbidden: NextResponse.json({ error: "forbidden" }, { status: 403 }),
-
-
-
+function errorResponse(message: string, status: number) {
+    return NextResponse.json({ error: message }, { status });
 }
+
+export const ErrorResponses = {
+    get Unauthorized() {
+        return errorResponse("Unauthorized", 401);
+    },
+    NotFound: (element: string) => errorResponse(`${element} does not exist`, 400),
+    get BadRequest() {
+        return errorResponse("Bad Request", 400);
+    },
+    get Forbidden() {
+        return errorResponse("Forbidden", 403);
+    },
+};

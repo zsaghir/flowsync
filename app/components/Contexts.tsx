@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
-import { fetchRefresh } from "@/lib/client/api";
+import { fetchRefresh, setTokenSink, setAuthLostSink } from "@/lib/client/api";
 import { LocalStorageSchema } from "@/lib/client/api";
 //import { openDb } from "idb"; setup for later index db implementation
 
@@ -66,7 +66,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [dataKey, setDataKey] = useState<Uint8Array | null>(null);
   const [loading, setLoading] = useState(true);
 
+
   useEffect(() => {
+    setTokenSink(setAccessToken)
+    setAuthLostSink(clearAuth)
 
     async function init() {
       try {
@@ -111,7 +114,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const clearAuth = (error = null as null | any) => {
 
     console.log(error ?? "Clear auth was triggered ");
-    fetch("/api/auth/logout");
+    fetch("/api/auth/logout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
     setUser(null);
     setAccessToken(null);
     setDataKey(null);

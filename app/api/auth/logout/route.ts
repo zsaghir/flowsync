@@ -3,7 +3,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { deleteTokenChain } from "@/lib/server/auth";
 import { ErrorResponses } from "@/lib/server/error";
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
 
     try {
         const refreshToken = req.cookies.get("refreshToken")?.value as string | undefined

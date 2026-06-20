@@ -6,6 +6,16 @@ import z from "zod"
 await _sodium.ready
 export const sodium = _sodium
 
+let pushToken: ((t: string) => void) | null = null
+export const setTokenSink = (fn: (t: string) => void) => { pushToken = fn }
+
+let inFlight: Promise<{ accessToken: string }> | null = null
+export const refreshOnce = () =>
+    (inFlight ??= fetchRefresh().finally(() => { inFlight = null }))
+
+let onAuthLost: (() => void) | null = null
+export const setAuthLostSink = (fn: () => void) => { onAuthLost = fn }
+
 const fetchTasksSchema = z.array(z.object({
     id: z.string(),
     data: z.string(),
@@ -24,7 +34,7 @@ export const TasksArraySchema = z.array(TaskSchema)
 const SaltFetchSchema = z.object({ salt: z.string() })
 const FetchErrorSchema = z.object({ error: z.string() })
 const RefershTokenResponseSchema = z.object({ accessToken: z.string() })
-const DataResponseSchema = z.object({ data: z.string(), nonce: z.string() })
+const DataResponseSchema = z.object({ data: z.string().nullable(), nonce: z.string().nullable() })
 
 
 const UserSchema = z.object({ id: z.string(), username: z.string() })
@@ -57,16 +67,18 @@ const fetchToApi = async (path: string, accessToken: string, method: string, bod
 }
 
 export const fetchRefresh = async () => {
-    const res = await fetch("/api/auth/refresh", { method: "get", headers: { "Content-Type": "application/json" } })
+    const res = await fetch("/api/auth/refresh", { method: "POST", headers: { "Content-Type": "application/json" } })
     if (!res.ok) {
 
         throw new Error(`Refresh failed at  : ${res.status}`)
 
     }
-    const _data = RefershTokenResponseSchema.safeParse(await res.json())
-    if (!_data.success) throw new Error(`Didn't get an access token`)
+    const data = RefershTokenResponseSchema.safeParse(await res.json())
+    if (!data.success) throw new Error(`Didn't get an access token`)
+    pushToken?.(data.data.accessToken)
 
-    return _data.data
+
+    return data.data
 
 
 
@@ -98,8 +110,9 @@ export const dataApi = {
 
 
         if (!res.ok && res.status === 401) {
-            const tokens = await fetchRefresh()
+            const tokens = await refreshOnce()
             accessToken = tokens.accessToken
+
             return await fetchToApi(path, accessToken, fetchParameters.method, body)
 
         }
@@ -109,13 +122,15 @@ export const dataApi = {
     },
 
     //Function to fetch data and eecrypt it 
-    fetchData: async (key: Uint8Array, accessToken: string, path: string, fetchParameters = { body: null, method: "GET" } as { body: string | null, method: string }) => {
+    fetchData: async (key: Uint8Array, accessToken: string, path: string,
+        fetchParameters = { body: null, method: "GET" } as { body: string | null, method: string }) => {
 
         let res = await fetchToApi(path, accessToken, fetchParameters.method, fetchParameters.body);
 
         if (!res.ok && res.status == 401) {
-            const tokens = await fetchRefresh()
+            const tokens = await refreshOnce()
             accessToken = tokens.accessToken
+
             res = await fetchToApi(path, accessToken, fetchParameters.method, fetchParameters.body);
         }
         if (!res.ok) {
@@ -139,6 +154,7 @@ export const dataApi = {
             return messages
 
         }
+        if (!dataObject.data.data || !dataObject.data.nonce) return {}
         //if it doesn't have data and a nonce
         const ciphertext = sodium.from_base64(dataObject.data.data,)
         const nonce = sodium.from_base64(dataObject.data.nonce)

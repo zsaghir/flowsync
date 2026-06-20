@@ -92,7 +92,9 @@ const UserTasks = () => {
         setTaskList((p) => p.filter((t) => t.id !== tempId));
         return;
       }
-      setTaskList((p) => p.map((t) => (t.id === tempId ? saved : t)));
+      setTaskList((p) => p.map((t) => (t.id === tempId ? { ...t, id: saved.id } : t)
+
+      ));
     } catch (error) {
       setTaskList((p) => p.filter((t) => t.id !== tempId));
       console.log(error)

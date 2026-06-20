@@ -10,11 +10,12 @@ import { Task } from "@/lib/server/db";
 
 
 
-const DB_PATH = (process.env.NODE_ENV === "production") ? path.join(process.cwd(), "data", "product.db") : path.join(process.cwd(), "data", "test.db")
+const DB_PATH = (process.env.NODE_ENV === "production") ? path.join(process.cwd(), "data", "prod.db") : path.join(process.cwd(), "data", "test.db")
 
 export const database = new DatabaseSync(DB_PATH)
 
 database.exec('PRAGMA foreign_keys = on')
+database.exec('PRAGMA journal_mode = WAL')
 database.exec(`CREATE TABLE IF NOT EXISTS users(
     username text UNIQUE NOT NULL,
     id text PRIMARY KEY,

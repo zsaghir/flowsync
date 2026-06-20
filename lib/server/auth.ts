@@ -136,7 +136,7 @@ export const newRefreshToken = (tokenId: string) => {
     const hash = crypto.createHash('sha256').update(refreshToken).digest('hex')
     const tokenGen = authSql.generateToken.run(hash, 0, tokenInformation.familyId)
     if (!tokenGen.changes) throw Error("Couldn't make a new token")
-    const accessToken = jwt.sign({ sub: tokenInformation.userId }, SECRET, { expiresIn: "1m" }); //1m for debugging purpose
+    const accessToken = jwt.sign({ sub: tokenInformation.userId }, SECRET, { expiresIn: "15m" });
 
     database.exec('COMMIT')
 
