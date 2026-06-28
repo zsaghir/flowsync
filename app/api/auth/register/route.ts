@@ -1,32 +1,49 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
-import { signToken, usernameIntoBase64, passwordIntoBase64 } from "@/lib/auth";
+import { authDb } from "@/lib/server/db";
+import { usernameIntoBase64, passwordIntoBase64, generateFamily } from "@/lib/server/auth";
+import z from "zod"
+import { ErrorResponses } from "@/lib/server/error";
 
+const RequestType = z.object({
+    username: z.string(), authKey: z.string(), salt: z.string(),
+    wrappedDataKey: z.string(), nonce: z.string()
+})
 
 export async function POST(req: Request) {
-    const { username, authKey, salt, wrappedDataKey, nonce } = await req.json();
 
-    if (!username || !authKey || !salt || !wrappedDataKey || !nonce)
-        return NextResponse.json({ error: "username and password required" }, { status: 400 });
-
+    const _request = RequestType.safeParse(await req.json())
+    if (!_request.success) {
+        return ErrorResponses.BadRequest
+    }
+    const { username, authKey, salt, wrappedDataKey, nonce } = _request.data
     const hashedUsername = usernameIntoBase64(username)
-
 
 
     const passwordHash = passwordIntoBase64(authKey)
 
 
-    const createUser = db.createUser(randomUUID(), hashedUsername, passwordHash, wrappedDataKey, salt, nonce);
+    const createUser = authDb.createUser(randomUUID(), hashedUsername, passwordHash, wrappedDataKey, salt, nonce);
+
+    if (!createUser.ok) return NextResponse.json({ error: "username already taken" }, { status: 409 });
+
+    const { accessToken, refreshToken } = generateFamily(createUser.id)
+    const res = NextResponse.json({
+        accessToken,
+        user: { id: createUser.id, username: username.trim().toLowerCase() }
+    })
+
+    res.cookies.set("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30,
+        path: "/api/auth"
+    });
 
 
-    if (createUser.ok) {
-        return NextResponse.json({
-            token: signToken(createUser.value.id),
-            user: { id: createUser.value.id, username: createUser.value.username }
-        })
-    } else {
-        return NextResponse.json({ error: "username already registered" }, { status: 409 });
-    }
+    return res
+
+
 }
 
