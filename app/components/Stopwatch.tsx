@@ -1,6 +1,13 @@
 "use client";
 import { Button } from "pixel-retroui";
 
+
+//Make tsx element called setBreakMinutes, with the following function values as default. But the tsx element should
+//allow you to set your own rules. Make it scrollable, and hence should have infinite rules set. 
+//getBreakMinutes is a subfunction of that tsx element (through react context), the timer should be able
+//to interact with this react states
+
+
 function getBreakMinutes(elapsedSeconds: number): number {
   const m = elapsedSeconds / 60;
   if (m < 25) return 5;
@@ -20,19 +27,19 @@ function formatElapsed(totalSeconds: number): string {
 }
 
 interface StopwatchProps {
-  elapsed:      number;
-  running:      boolean;
-  onStart:      () => void;
-  onStop:       () => void;
-  onReset:      () => void;
+  elapsed: number;
+  running: boolean;
+  onStart: () => void;
+  onStop: () => void;
+  onReset: () => void;
   onStartBreak: (minutes: number) => void;
 }
 
 export default function Stopwatch({ elapsed, running, onStart, onStop, onReset, onStartBreak }: StopwatchProps) {
-  const stopped      = elapsed > 0 && !running;
+  const stopped = elapsed > 0 && !running;
   const breakMinutes = stopped ? getBreakMinutes(elapsed) : null;
-  const workedMin    = Math.floor(elapsed / 60);
-  const workedSec    = elapsed % 60;
+  const workedMin = Math.floor(elapsed / 60);
+  const workedSec = elapsed % 60;
 
   return (
     <div className="flex flex-col items-center">

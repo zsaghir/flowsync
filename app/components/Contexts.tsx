@@ -7,6 +7,8 @@ import { LocalStorageSchema } from "@/lib/client/api";
 //import { openDb } from "idb"; setup for later index db implementation
 
 
+//Add context for stopwatch rules, that is used to get the time. 
+
 //Settings context
 type SettingsType = {
   pomodoroTime: number;

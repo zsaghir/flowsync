@@ -8,6 +8,10 @@ import {
   Input,
 } from "pixel-retroui";
 
+//Merge the following tasks into UserTasks, and completely remove this file. The only difference is it should use index db
+//to store, and if user is not logged in, it should try to fetch from index db and only on failure should it put blank
+//task list
+
 const Tasks = () => {
   const [taskInput, setTaskInput] = useState("");
   const [taskList, setTaskList] = useState<
