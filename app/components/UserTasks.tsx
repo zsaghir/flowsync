@@ -6,6 +6,7 @@ import {
 } from "pixel-retroui";
 
 import { dataApi } from "@/lib/client/api";
+import { openDB } from "idb";
 import z from "zod"
 import { TaskSchema, TasksArraySchema } from "@/lib/client/api"
 
@@ -20,8 +21,19 @@ const saveTaskSchema = z.object({
 
 })
 
+// Guest tasks live in IndexedDB so they survive reloads without an account.
+const openDb = () =>
+  openDB("flowsync", 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains("tasks")) {
+        db.createObjectStore("tasks", { keyPath: "id" });
+      }
+    },
+  });
+
 const UserTasks = () => {
   const { accessToken, dataKey, clearAuth } = useAuth();
+  const isGuest = !accessToken || !dataKey;
   const [taskList, setTaskList] = useState<TasksArray>([]);
   const [taskInput, setTaskInput] = useState("");
   const announcedCompleteRef = useRef(false);
@@ -33,12 +45,23 @@ const UserTasks = () => {
 
 
   useEffect(() => {
-    if (!accessToken || !dataKey) {
-      setTaskList([]);
-      return;
-    }
-
     let cancelled = false;
+
+    if (isGuest) {
+      openDb()
+        .then((db) => db.getAll("tasks"))
+        .then((tasks) => {
+          if (!cancelled) setTaskList(TasksArraySchema.parse(tasks));
+        })
+        .catch((error) => {
+          console.log(error);
+          if (!cancelled) setTaskList([]);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
 
     dataApi.fetchData(dataKey, accessToken, "/api/tasks/")
       .then((_tasks) => {
@@ -73,6 +96,19 @@ const UserTasks = () => {
     if (!taskInput.trim()) return;
     const title = taskInput.trim();
     setTaskInput("");
+
+    if (isGuest) {
+      const task: Task = { id: crypto.randomUUID(), title, completed: false };
+      setTaskList((p) => [...p, task]);
+      try {
+        const db = await openDb();
+        await db.put("tasks", task);
+      } catch (error) {
+        console.log(error);
+      }
+      return;
+    }
+
     const tempId = `tmp-${Date.now()}`;
     setTaskList((p) => [...p, { id: tempId, title, completed: false }]);
     try {
@@ -103,6 +139,17 @@ const UserTasks = () => {
 
   const toggleTask = async (id: string, completed: boolean, title: string) => {
     setTaskList((p) => p.map((t) => (t.id === id ? { ...t, completed } : t)));
+
+    if (isGuest) {
+      try {
+        const db = await openDb();
+        await db.put("tasks", { id, title, completed });
+      } catch (error) {
+        console.log(error);
+      }
+      return;
+    }
+
     try {
       if (!accessToken || !dataKey) {
         throw Error("Corrupted User Cache");
@@ -119,6 +166,17 @@ const UserTasks = () => {
 
   const deleteTask = async (id: string) => {
     setTaskList((p) => p.filter((t) => t.id !== id));
+
+    if (isGuest) {
+      try {
+        const db = await openDb();
+        await db.delete("tasks", id);
+      } catch (error) {
+        console.log(error);
+      }
+      return;
+    }
+
     try {
       if (!accessToken || !dataKey) throw new Error("Corrupted user cache")
       await dataApi.sendData(dataKey, accessToken, `/api/tasks/${id}`, { method: "DELETE", body: null });

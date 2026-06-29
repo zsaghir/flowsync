@@ -4,10 +4,49 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import { fetchRefresh, setTokenSink, setAuthLostSink } from "@/lib/client/api";
 import { LocalStorageSchema } from "@/lib/client/api";
-//import { openDb } from "idb"; setup for later index db implementation
 
+//Stopwatch break rules context
+export type BreakRule = { id: string; minMinutes: number; breakMinutes: number };
 
-//Add context for stopwatch rules, that is used to get the time. 
+export const DEFAULT_BREAK_RULES: BreakRule[] = [
+  { id: "r0", minMinutes: 0, breakMinutes: 5 },
+  { id: "r25", minMinutes: 25, breakMinutes: 6 },
+  { id: "r30", minMinutes: 30, breakMinutes: 10 },
+  { id: "r40", minMinutes: 40, breakMinutes: 15 },
+  { id: "r60", minMinutes: 60, breakMinutes: 20 },
+];
+
+type StopwatchRulesType = {
+  rules: BreakRule[];
+  setRules: (rules: BreakRule[]) => void;
+  getBreakMinutes: (elapsedSeconds: number) => number;
+};
+
+export const StopwatchRulesContext = createContext<StopwatchRulesType>({
+  rules: DEFAULT_BREAK_RULES,
+  setRules: () => { },
+  getBreakMinutes: () => 5,
+});
+
+export const StopwatchRulesProvider = ({ children }: { children: React.ReactNode }) => {
+  const [rules, setRules] = useState<BreakRule[]>(DEFAULT_BREAK_RULES);
+
+  const getBreakMinutes = (elapsedSeconds: number) => {
+    const m = elapsedSeconds / 60;
+    const sorted = [...rules].sort((a, b) => a.minMinutes - b.minMinutes);
+    let result = sorted.length ? sorted[0].breakMinutes : 0;
+    for (const r of sorted) if (m >= r.minMinutes) result = r.breakMinutes;
+    return result;
+  };
+
+  return (
+    <StopwatchRulesContext.Provider value={{ rules, setRules, getBreakMinutes }}>
+      {children}
+    </StopwatchRulesContext.Provider>
+  );
+};
+
+export const useStopwatchRules = () => useContext(StopwatchRulesContext);
 
 //Settings context
 type SettingsType = {

@@ -48,6 +48,7 @@ function Timer() {
   const countdownStartSecondsRef = useRef(25 * 60);
   const isPausedRef = useRef(isPaused);
   const modeRef = useRef<Mode>(mode);
+  const preBreakModeRef = useRef<Mode>("pomodoro"); // mode to return to after a break ends
 
   // ── stopwatch state (lifted here so Timer owns all state) ─────────────────
   const [swElapsed, setSwElapsed] = useState(0);
@@ -261,10 +262,8 @@ function Timer() {
   useEffect(() => {
     function switchMode() {
       const finishedMode = modeRef.current;
-      const next = modeRef.current === "pomodoro" ? "break" : "pomodoro";
-      const nextSec = next === "pomodoro"
-        ? settingsInfo.pomodoroTime * 60
-        : settingsInfo.breakTime * 60;
+      const next = finishedMode === "pomodoro" ? "break" : preBreakModeRef.current;
+      if (next === "break") preBreakModeRef.current = finishedMode;
       isPausedRef.current = true;
       setIsPaused(true);
       stopMusic();
@@ -275,7 +274,17 @@ function Timer() {
       setMode(next);
       modeRef.current = next;
       resetClockRefs();
-      setCountdownTime(nextSec);
+      if (next === "stopwatch") {
+        swRunningRef.current = false;
+        setSwRunning(false);
+        swElapsedRef.current = 0;
+        setSwElapsed(0);
+      } else {
+        const nextSec = next === "pomodoro"
+          ? settingsInfo.pomodoroTime * 60
+          : settingsInfo.breakTime * 60;
+        setCountdownTime(nextSec);
+      }
       setCompletedPulse(true);
       showSpeech(finishedMode === "pomodoro" ? "Nice work!" : "You got this!");
       save();
@@ -342,6 +351,9 @@ function Timer() {
   // ── helpers ───────────────────────────────────────────────────────────────
   function switchToMode(newMode: Mode, newSeconds?: number) {
     if (isRunning) return; // blocked while any timer is running
+    if (newMode === "break" && modeRef.current !== "break") {
+      preBreakModeRef.current = modeRef.current;
+    }
     stopMusic();
     setIsPaused(true); isPausedRef.current = true;
     setSwRunning(false); swRunningRef.current = false;
@@ -354,6 +366,7 @@ function Timer() {
   }
 
   function handleStartBreak(breakMinutes: number) {
+    if (modeRef.current !== "break") preBreakModeRef.current = modeRef.current;
     const secs = breakMinutes * 60;
     setMode("break"); modeRef.current = "break";
     setCountdownTime(secs);
