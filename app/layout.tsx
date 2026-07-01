@@ -4,6 +4,8 @@ import "pixel-retroui/dist/index.css";
 import "pixel-retroui/dist/fonts.css";
 import type { Metadata } from "next";
 import { AuthProvider } from "@/app/components/Contexts";
+import { ThemeProvider } from "@/app/components/ThemeContext";
+import { themeVars } from "@/app/theme";
 
 export const metadata: Metadata = {
   title: "Flowsync",
@@ -17,12 +19,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
-        <AuthProvider>
-          <main className="min-h-screen text-white font-serif">
-            {children}
-          </main>
-        </AuthProvider>
+      <body suppressHydrationWarning style={themeVars}>
+        <ThemeProvider>
+          <AuthProvider>
+            <main className="min-h-screen text-white font-serif">
+              {children}
+            </main>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

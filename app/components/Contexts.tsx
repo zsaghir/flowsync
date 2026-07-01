@@ -54,6 +54,8 @@ type SettingsType = {
   setPomodoroTime: (time: number) => void;
   breakTime: number;
   setBreakTime: (time: number) => void;
+  autoSwitch: boolean;
+  setAutoSwitch: (auto: boolean) => void;
   workMusic: string;
   setWorkMusic: (music: string) => void;
   breakMusic: string;
@@ -67,6 +69,8 @@ export const SettingsContext = createContext<SettingsType>({
   setPomodoroTime: () => { },
   breakTime: 5,
   setBreakTime: () => { },
+  autoSwitch: false,
+  setAutoSwitch: () => { },
   workMusic: "None",
   setWorkMusic: () => { },
   breakMusic: "None",
