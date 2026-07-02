@@ -10,8 +10,71 @@ body {
 
     background: radial-gradient(
     1200px 600px at 50% 35%,
-   #e3ddc6
+    var(--bg, #FFF2D8),
+    var(--bg-edge, #f5e8c4)
   );
+}
+
+.pixel-font {
+  font-family: "Minecraft", monospace;
+}
+
+/* Keep every popup fully on screen with breathing room on all sides.
+   pixel-retroui's overlay is position:fixed inset:0 with flex centering,
+   no padding and no scroll — so any tall popup overflows equally past the
+   top (under the navbar) and bottom, with the top part unreachable.
+   Overriding the overlay once fixes all popups, present and future.
+   The attribute selector survives the hashed CSS-module class names;
+   !important is needed because pixel-retroui's CSS loads after ours. */
+[class*="pixelPopupOverlay"] {
+  align-items: flex-start !important;
+  overflow-y: auto !important;
+  padding: 4.5rem 0.75rem 1.5rem !important;
+}
+
+[class*="pixelPopup"] {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Navbar visibility. pixel-retroui bundles an un-layered copy of Tailwind
+   utilities that beats our layered sm:hidden/sm:flex in the cascade, so
+   these use plain media queries with !important to stay mutually exclusive:
+   inline buttons on laptop, dropdown menu on phone. */
+.nav-desktop {
+  display: flex;
+}
+
+.nav-phone {
+  display: block;
+}
+
+@media (max-width: 639px) {
+  .nav-desktop {
+    display: none !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .nav-phone {
+    display: none !important;
+  }
+}
+
+/* Themed outline for controls that need extra definition against
+   same-tone backgrounds (EDIT buttons etc.). */
+.pixel-outline {
+  outline: 2px solid var(--line-strong, var(--ink, #000));
+  outline-offset: 2px;
+}
+
+/* Uneven corner radii fake a hand-drawn box outline */
+.sketch-border {
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
+
+.sketch-border-sm {
+  border-radius: 12px 4px 10px 5px / 5px 10px 4px 12px;
 }
 
 .timer-card-with-mascot {
@@ -54,10 +117,10 @@ body {
   min-width: 92px;
   max-width: 136px;
   padding: 6px 8px;
-  border: 3px solid #30210b;
-  background: #fff8e8;
-  box-shadow: 4px 4px 0 #6f4e37;
-  color: #30210b;
+  border: 3px solid var(--ink, #30210b);
+  background: var(--bg, #fff8e8);
+  box-shadow: 4px 4px 0 var(--ink, #6f4e37);
+  color: var(--ink, #30210b);
   font-size: 0.75rem;
   font-weight: 800;
   line-height: 1.1;
@@ -104,3 +167,4 @@ body {
     animation: none !important;
   }
 }
+

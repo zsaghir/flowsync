@@ -46,6 +46,6 @@ next-env.d.ts
 
 DockerFile
 
-data/test.json
+data/*
 
 *.db

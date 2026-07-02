@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { usernameIntoBase64 } from "@/lib/auth"
+import { authDb } from "@/lib/server/db";
+import { usernameIntoBase64 } from "@/lib/server/auth"
 export async function POST(req: Request) {
 
     try {
         const { username } = await req.json();
         const hashedUsername = usernameIntoBase64(username)
 
-        const user = db.getUserSalt(hashedUsername);
+        const user = authDb.getUserSalt(hashedUsername);
         if (!user) {
             return NextResponse.json({ error: "Username Does not exist" }, { status: 400 });
         }
+        if (!user?.salt) throw Error("Databaase did not fetch the right information")
         return NextResponse.json({ salt: user.salt });
     } catch (error) {
         throw error

@@ -1,14 +1,18 @@
+"use client";
+
 import React from "react";
 import { Button } from "pixel-retroui";
+import { useTheme } from "./ThemeContext";
 
 function Pomodoro(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { theme } = useTheme();
   return (
     <Button
       {...props}
-      bg="#D6DAC8"
-      textColor="#30210b"
-      borderColor="#30210b"
-      shadow="#30210b"
+      bg={theme.surface}
+      textColor={theme.ink}
+      borderColor={theme.ink}
+      shadow={theme.ink}
       className="transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:scale-110"
     >
       POMODORO
