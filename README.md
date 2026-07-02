@@ -122,3 +122,4 @@ lib/
 ├── client/api.ts         E2E encryption + authenticated fetch layer
 └── server/               SQLite schema, JWT + refresh-token rotation
 ```
+
