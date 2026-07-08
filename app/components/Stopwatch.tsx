@@ -4,12 +4,16 @@ import { Button, Popup } from "pixel-retroui";
 import { useStopwatchRules, type BreakRule } from "./Contexts";
 import { useTheme } from "./ThemeContext";
 
-function formatElapsed(totalSeconds: number): string {
-  const h = Math.floor(totalSeconds / 3600);
+export function formatElapsed(totalSeconds: number): string {
+  const months = Math.floor(totalSeconds / (30 * 86400));
+  const days = Math.floor((totalSeconds % (30 * 86400)) / 86400);
+  const h = Math.floor((totalSeconds % 86400) / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;
-  if (h > 0)
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const hms = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  if (months > 0) return `${months}mo ${days}d ${hms}`;
+  if (days > 0) return `${days}d ${hms}`;
+  if (h > 0) return hms;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
@@ -25,6 +29,7 @@ interface StopwatchProps {
 export default function Stopwatch({ elapsed, running, onStart, onStop, onReset, onStartBreak }: StopwatchProps) {
   const { theme } = useTheme();
   const { getBreakMinutes } = useStopwatchRules();
+  const display = formatElapsed(elapsed);
   const stopped = elapsed > 0 && !running;
   const breakMinutes = stopped ? getBreakMinutes(elapsed) : null;
   const workedMin = Math.floor(elapsed / 60);
@@ -32,8 +37,11 @@ export default function Stopwatch({ elapsed, running, onStart, onStop, onReset, 
 
   return (
     <div className="flex flex-col items-center">
-      <p className="text-[clamp(3.25rem,18vw,8rem)] sm:text-9xl font-extrabold my-4 tracking-normal sm:tracking-widest leading-none text-[var(--ink)]">
-        {formatElapsed(elapsed)}
+      <p
+        className="font-extrabold my-4 tracking-normal sm:tracking-widest leading-none whitespace-nowrap text-[var(--ink)]"
+        style={{ fontSize: `min(8rem, ${Math.round(720 / display.length)}px, ${(90 / display.length).toFixed(1)}vw)` }}
+      >
+        {display}
       </p>
 
       <div className="flex flex-wrap justify-center gap-3">

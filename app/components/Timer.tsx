@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useContext, type ReactNode } from "react";
 import { Break, PauseButton, PlayButton } from "./buttons";
 import Pomodoro from "./Pomodoro";
-import Stopwatch from "./Stopwatch";
+import Stopwatch, { formatElapsed } from "./Stopwatch";
 import Setting from "./Setting";
 import InfoButton from "./InfoButton";
 import { setTimerStatus } from "./timerStatus";
@@ -417,6 +417,7 @@ function Timer() {
   const minutes = (modeRef.current === "stopwatch") ? Math.floor(swElapsed / 60) : Math.floor(seconds / 60);
   const remSec = (modeRef.current === "stopwatch") ? Math.floor(swElapsed % 60) : Math.floor(seconds % 60);
   const formatted = `${String(minutes).padStart(2, "0")}:${String(remSec).padStart(2, "0")}`;
+  const countdownDisplay = formatElapsed(seconds);
   useEffect(() => {
     document.title = `${formatted} - FlowSync`;
   }, [formatted]);
@@ -488,7 +489,12 @@ function Timer() {
           />
         ) : (
           <>
-            <p className="text-[clamp(3.25rem,18vw,8rem)] sm:text-9xl font-extrabold my-4 tracking-normal sm:tracking-widest leading-none text-[var(--ink)]">{formatted}</p>
+            <p
+              className="font-extrabold my-4 tracking-normal sm:tracking-widest leading-none whitespace-nowrap text-[var(--ink)]"
+              style={{ fontSize: `min(8rem, ${Math.round(720 / countdownDisplay.length)}px, ${(90 / countdownDisplay.length).toFixed(1)}vw)` }}
+            >
+              {countdownDisplay}
+            </p>
             <div className="flex flex-wrap justify-center items-center gap-3">
             {isPaused ? (
               <PlayButton onClick={() => {
